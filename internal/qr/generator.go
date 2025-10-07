@@ -35,7 +35,6 @@ func GenerateAll(serverURL, outputDir string) error {
 		{"fold", "Fold", fmt.Sprintf("%s/log/fold", serverURL)},
 		{"shaped", "Shaped", fmt.Sprintf("%s/log/shaped", serverURL)},
 		{"fridge-in", "Fridge In", fmt.Sprintf("%s/log/fridge-in", serverURL)},
-		{"fridge-out", "Fridge Out", fmt.Sprintf("%s/log/fridge-out", serverURL)},
 		{"oven-in", "Oven In", fmt.Sprintf("%s/log/oven-in", serverURL)},
 		{"temp", "LOG TEMP", fmt.Sprintf("%s/temp", serverURL)},
 		{"notes", "ADD NOTE", fmt.Sprintf("%s/notes", serverURL)},
@@ -147,6 +146,35 @@ func generatePDF(events []EventQR, qrDir, outputPath string) error {
 	pdf.SetMargins(10, 10, 10)
 	pdf.AddPage()
 
+	// Add title and workflow synopsis
+	pdf.SetFont("Arial", "B", 14)
+	pdf.Cell(0, 8, "Sourdough Bread Logger - QR Codes")
+	pdf.Ln(10)
+
+	// Workflow synopsis
+	pdf.SetFont("Arial", "", 9)
+	pdf.SetTextColor(80, 80, 80)
+
+	workflow := []string{
+		"WORKFLOW: START LOAF \u2192 Fed \u2192 Levain Ready \u2192 Mixed \u2192 Fold (3-4x) \u2192 Shaped \u2192 Fridge In \u2192 Oven In \u2192 COMPLETE",
+		"",
+		"LOG TEMP: Scan anytime to log kitchen/dough temperature (critical for timing)",
+		"ADD NOTE: Scan anytime to add observations (crumb, taste, process notes)",
+		"COMPLETE: Assessment form (proof level, crumb, browning, score)",
+		"GET QR CODES: Download this PDF to your phone",
+	}
+
+	for _, line := range workflow {
+		if line == "" {
+			pdf.Ln(3)
+		} else {
+			pdf.MultiCell(0, 4, line, "", "L", false)
+		}
+	}
+
+	pdf.Ln(8)
+	pdf.SetTextColor(0, 0, 0)
+
 	const (
 		qrSize  = 35.0 // QR code size in mm (smaller to fit more)
 		spacing = 5.0  // Spacing between codes
@@ -154,7 +182,7 @@ func generatePDF(events []EventQR, qrDir, outputPath string) error {
 	)
 
 	x := 10.0
-	y := 10.0
+	y := pdf.GetY()
 	col := 0
 
 	for _, event := range events {
