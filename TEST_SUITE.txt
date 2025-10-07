@@ -1,0 +1,225 @@
+================================================================================
+TEST SUITE - Automated Testing for Sourdough Logger
+================================================================================
+
+Date: 2025-10-07
+
+OVERVIEW
+================================================================================
+
+The Sourdough Logger now has a comprehensive test suite with:
+- Unit tests for all major components
+- Integration tests for full workflow validation
+- Automated test running via Makefile
+- Coverage reporting
+
+TEST FILES CREATED
+================================================================================
+
+1. **internal/server/handlers_test.go**
+   - Tests all HTTP endpoints
+   - Validates request/response handling
+   - Tests error conditions
+   - 11 test functions covering:
+     * Health check
+     * Bake start/duplicate prevention
+     * Temperature logging (kitchen & dough)
+     * Note logging
+     * Event logging (all event types)
+     * Fold count increment
+     * Bake completion with assessment
+     * Status endpoint
+     * QR code PDF serving
+     * Web UI pages
+     * Method not allowed handling
+
+2. **internal/storage/jsonl_test.go**
+   - Tests storage layer functionality
+   - Validates multi-day bake support
+   - Tests concurrency safety
+   - 11 test functions covering:
+     * Storage creation
+     * Event appending
+     * Reading current/specific bakes
+     * Active bake detection
+     * Multi-day bake continuity
+     * Last event retrieval
+     * Bake listing
+     * Completion detection
+     * Assessment storage
+     * Empty bake handling
+     * Concurrent writes
+
+3. **test/integration_test.sh**
+   - End-to-end workflow testing
+   - Tests against running server
+   - Validates full bake lifecycle
+   - 12 test scenarios:
+     * Health check
+     * Bake start (new & existing)
+     * Duplicate start prevention
+     * Workflow event logging
+     * Temperature logging (both types)
+     * Note logging
+     * Fold counting
+     * Bake completion with assessment
+     * New bake after completion
+     * Web UI page accessibility
+     * Status endpoint
+     * Invalid request handling
+
+MAKEFILE TARGETS
+================================================================================
+
+make test              - Run all unit tests
+make test-coverage     - Run tests with HTML coverage report
+make test-integration  - Run integration tests (requires server running)
+make test-all          - Run both unit and integration tests
+
+RUNNING TESTS
+================================================================================
+
+Unit Tests:
+  $ make test
+
+  Output:
+  ✓ 22 unit tests across 2 packages
+  ✓ All handlers tested
+  ✓ All storage functions tested
+  ✓ ~30ms execution time
+
+Coverage Report:
+  $ make test-coverage
+
+  Generates:
+  - coverage.out (raw data)
+  - coverage.html (visual report)
+
+Integration Tests:
+  $ make test-integration
+
+  Requirements:
+  - Server must be running on port 8080
+  - Tests full workflow end-to-end
+
+  Output:
+  ✓ 24 integration tests
+  ✓ Color-coded output (green/red)
+  ✓ Summary with pass/fail counts
+
+All Tests:
+  $ make test-all
+
+  Runs unit tests followed by integration tests
+
+TEST RESULTS
+================================================================================
+
+✅ Unit Tests: 22/22 PASS
+  - internal/server: 11/11 PASS
+  - internal/storage: 11/11 PASS
+
+✅ Integration Tests: 24/24 PASS
+  - Health & connectivity: 1/1 PASS
+  - Bake lifecycle: 4/4 PASS
+  - Event logging: 11/11 PASS
+  - Web UI: 3/3 PASS
+  - Error handling: 3/3 PASS
+  - Status & reporting: 2/2 PASS
+
+COVERAGE AREAS
+================================================================================
+
+Endpoints Tested:
+  ✓ GET  /health
+  ✓ POST /bake/start
+  ✓ GET  /bake/start (browser)
+  ✓ POST /log/{event}
+  ✓ GET  /log/{event} (QR codes)
+  ✓ POST /log/temp/{value}
+  ✓ POST /log/temp/{value}?type=dough
+  ✓ POST /log/note (JSON)
+  ✓ POST /log/bake-complete (with assessment)
+  ✓ GET  /status
+  ✓ GET  /temp
+  ✓ GET  /notes
+  ✓ GET  /complete
+  ✓ GET  /qrcodes.pdf
+
+Event Types Tested:
+  ✓ starter-out
+  ✓ fed
+  ✓ levain-ready
+  ✓ mixed
+  ✓ fold (with auto-increment)
+  ✓ shaped
+  ✓ fridge-in
+  ✓ fridge-out
+  ✓ oven-in
+  ✓ bake-complete (with assessment)
+  ✓ temperature (kitchen & dough)
+  ✓ note
+
+Storage Functions Tested:
+  ✓ Create storage directory
+  ✓ Append events to JSONL
+  ✓ Read current active bake
+  ✓ Read specific bake by date
+  ✓ List all bakes
+  ✓ Detect active vs completed bakes
+  ✓ Get last event
+  ✓ Check for current bake
+  ✓ Handle multi-day bakes
+  ✓ Thread-safe concurrent writes
+  ✓ Parse assessment data
+
+Error Conditions Tested:
+  ✓ Invalid temperature values
+  ✓ Empty notes
+  ✓ Invalid event types
+  ✓ Duplicate bake starts
+  ✓ Method not allowed
+  ✓ Missing parameters
+  ✓ Malformed JSON
+
+CONTINUOUS INTEGRATION READY
+================================================================================
+
+The test suite is designed for CI/CD:
+- Fast execution (<1 second unit, ~3 seconds integration)
+- Clear pass/fail exit codes
+- No external dependencies (except running server for integration)
+- Repeatable and idempotent
+- Color-coded output for easy scanning
+
+Example CI Workflow:
+  1. Build: make build
+  2. Unit Tests: make test
+  3. Start Server: ./bin/sourdough-server &
+  4. Integration Tests: make test-integration
+  5. Coverage: make test-coverage
+
+BENEFITS
+================================================================================
+
+✓ Catch regressions before deployment
+✓ Document expected behavior
+✓ Enable confident refactoring
+✓ Validate new features automatically
+✓ Provide usage examples
+✓ Support TDD workflow
+✓ Generate coverage reports
+
+NEXT STEPS
+================================================================================
+
+Potential enhancements:
+- Add tests for PDF generation
+- Add tests for analysis/reporting
+- Add performance/load tests
+- Set up GitHub Actions CI
+- Add mutation testing
+- Target 90%+ code coverage
+
+Your sourdough logger now has professional-grade testing! 🍞
+================================================================================

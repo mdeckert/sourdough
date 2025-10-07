@@ -635,25 +635,44 @@ const tempPageHTML = `<!DOCTYPE html>
                 transform: translateY(0);
             }
         }
-        .quick-buttons {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
             margin-bottom: 20px;
         }
-        .quick-temp {
-            padding: 10px;
-            background: #f3f4f6;
-            border: 2px solid transparent;
-            border-radius: 8px;
-            cursor: pointer;
-            text-align: center;
-            font-weight: 500;
-            transition: all 0.2s;
+        input[type="range"] {
+            flex: 1;
+            height: 8px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: #e0e0e0;
+            border-radius: 5px;
+            outline: none;
         }
-        .quick-temp:hover {
-            background: #e5e7eb;
-            border-color: #667eea;
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            background: #667eea;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            background: #667eea;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+        .slider-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+            min-width: 70px;
+            text-align: center;
         }
     </style>
 </head>
@@ -666,78 +685,72 @@ const tempPageHTML = `<!DOCTYPE html>
         <div id="error" class="error"></div>
 
         <div class="input-group">
-            <label>Quick Select</label>
-            <div class="quick-buttons">
-                <div class="quick-temp" onclick="setTemp(68)">68°F</div>
-                <div class="quick-temp" onclick="setTemp(70)">70°F</div>
-                <div class="quick-temp" onclick="setTemp(72)">72°F</div>
-                <div class="quick-temp" onclick="setTemp(74)">74°F</div>
-                <div class="quick-temp" onclick="setTemp(76)">76°F</div>
-                <div class="quick-temp" onclick="setTemp(78)">78°F</div>
+            <label>Temperature (60-80°F)</label>
+            <div class="slider-container">
+                <input type="range" id="tempSlider" min="60" max="80" value="70" step="1">
+                <div class="slider-value" id="sliderValue">70°F</div>
             </div>
         </div>
 
         <div class="input-group">
-            <label for="temp">Temperature</label>
-            <input type="number" id="temp" min="60" max="80" step="1" placeholder="76" autofocus>
-            <div class="temp-unit">°F</div>
+            <label for="temp">Manual Entry</label>
+            <input type="number" id="temp" min="60" max="80" step="1" placeholder="76">
         </div>
 
         <div class="radio-group">
             <div class="radio-option">
-                <input type="radio" id="kitchen" name="tempType" value="kitchen" checked>
-                <label for="kitchen">Kitchen</label>
+                <input type="radio" id="dough" name="tempType" value="dough">
+                <label for="dough" onclick="submitTemp('dough')">Dough</label>
             </div>
             <div class="radio-option">
-                <input type="radio" id="dough" name="tempType" value="dough">
-                <label for="dough">Dough</label>
+                <input type="radio" id="kitchen" name="tempType" value="kitchen">
+                <label for="kitchen" onclick="submitTemp('kitchen')">Kitchen</label>
             </div>
         </div>
-
-        <button onclick="logTemp()">Log Temperature</button>
     </div>
 
     <script>
-        function setTemp(value) {
-            document.getElementById('temp').value = value;
-        }
+        const slider = document.getElementById('tempSlider');
+        const sliderValue = document.getElementById('sliderValue');
+        const manualInput = document.getElementById('temp');
 
-        async function logTemp() {
-            const temp = document.getElementById('temp').value;
-            const tempType = document.querySelector('input[name="tempType"]:checked').value;
+        // Update slider display
+        slider.oninput = function() {
+            sliderValue.textContent = this.value + '°F';
+            manualInput.value = ''; // Clear manual input when slider moves
+        };
+
+        // Sync manual input to slider
+        manualInput.oninput = function() {
+            if (this.value) {
+                slider.value = this.value;
+                sliderValue.textContent = this.value + '°F';
+            }
+        };
+
+        async function submitTemp(tempType) {
+            let temp = manualInput.value || slider.value;
 
             if (!temp || temp < 60 || temp > 80) {
-                showError('Please enter a temperature between 60°F and 80°F');
+                showError('Temperature must be between 60°F and 80°F');
                 return;
             }
-
-            const button = document.querySelector('button');
-            button.disabled = true;
-            button.textContent = 'Logging...';
 
             try {
                 const url = '/log/temp/' + temp + (tempType === 'dough' ? '?type=dough' : '');
                 const response = await fetch(url, { method: 'POST' });
 
                 if (response.ok) {
-                    showSuccess(temp + '°F logged successfully!');
-                    document.getElementById('temp').value = '';
-
-                    // Re-enable after 1 second
-                    setTimeout(() => {
-                        button.disabled = false;
-                        button.textContent = 'Log Temperature';
-                    }, 1000);
+                    showSuccess(temp + '°F (' + tempType + ') logged!');
+                    manualInput.value = '';
+                    slider.value = 70;
+                    sliderValue.textContent = '70°F';
                 } else {
                     const text = await response.text();
                     showError('Error: ' + text);
-                    button.disabled = false;
-                    button.textContent = 'Log Temperature';
                 }
             } catch (error) {
                 showError('Network error: ' + error.message);
-                button.disabled = false;
-                button.textContent = 'Log Temperature';
             }
         }
 
@@ -758,13 +771,6 @@ const tempPageHTML = `<!DOCTYPE html>
             el.style.display = 'block';
             document.getElementById('success').style.display = 'none';
         }
-
-        // Allow Enter key to submit
-        document.getElementById('temp').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                logTemp();
-            }
-        });
     </script>
 </body>
 </html>`

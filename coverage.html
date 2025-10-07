@@ -1,0 +1,771 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>server: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/mdeckert/sourdough/internal/server/handlers.go (61.6%)</option>
+				
+				<option value="file1">github.com/mdeckert/sourdough/internal/storage/jsonl.go (66.4%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package server
+
+import (
+        "encoding/json"
+        "fmt"
+        "log"
+        "net/http"
+        "os"
+        "strconv"
+        "strings"
+
+        "github.com/mdeckert/sourdough/internal/models"
+        "github.com/mdeckert/sourdough/internal/storage"
+)
+
+// Server handles HTTP requests
+type Server struct {
+        storage *storage.Storage
+        port    string
+}
+
+// New creates a new Server instance
+func New(storage *storage.Storage, port string) *Server <span class="cov8" title="1">{
+        return &amp;Server{
+                storage: storage,
+                port:    port,
+        }
+}</span>
+
+// Start starts the HTTP server
+func (s *Server) Start() error <span class="cov0" title="0">{
+        mux := http.NewServeMux()
+
+        // Register handlers
+        mux.HandleFunc("/health", s.handleHealth)
+        mux.HandleFunc("/bake/start", s.handleBakeStart)
+        mux.HandleFunc("/log/", s.handleLog)
+        mux.HandleFunc("/status", s.handleStatus)
+        mux.HandleFunc("/temp", s.handleTempPage)
+        mux.HandleFunc("/notes", s.handleNotesPage)
+        mux.HandleFunc("/complete", s.handleCompletePage)
+        mux.HandleFunc("/qrcodes.pdf", s.handleQRCodePDF)
+
+        // Wrap mux with logging middleware
+        handler := s.loggingMiddleware(mux)
+
+        addr := fmt.Sprintf(":%s", s.port)
+        log.Printf("Starting server on %s", addr)
+        return http.ListenAndServe(addr, handler)
+}</span>
+
+// loggingMiddleware logs all requests
+func (s *Server) loggingMiddleware(next http.Handler) http.Handler <span class="cov0" title="0">{
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) </span><span class="cov0" title="0">{
+                log.Printf("%s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
+                next.ServeHTTP(w, r)
+        }</span>)
+}
+
+// handleHealth returns a simple health check
+func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        if r.Method != http.MethodGet </span><span class="cov8" title="1">{
+                http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+                return
+        }</span>
+
+        <span class="cov8" title="1">w.Header().Set("Content-Type", "application/json")
+        json.NewEncoder(w).Encode(map[string]string{
+                "status": "ok",
+        })</span>
+}
+
+// handleBakeStart starts a new bake
+func (s *Server) handleBakeStart(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        if r.Method != http.MethodPost &amp;&amp; r.Method != http.MethodGet </span><span class="cov8" title="1">{
+                http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+                return
+        }</span>
+
+        // Check if there's already a bake today
+        <span class="cov8" title="1">hasBake, err := s.storage.HasCurrentBake()
+        if err != nil </span><span class="cov0" title="0">{
+                http.Error(w, fmt.Sprintf("Error checking current bake: %v", err), http.StatusInternalServerError)
+                return
+        }</span>
+
+        <span class="cov8" title="1">if hasBake </span><span class="cov8" title="1">{
+                // Show nice message if accessed from browser
+                if r.Method == http.MethodGet </span><span class="cov0" title="0">{
+                        w.Header().Set("Content-Type", "text/html")
+                        w.Write([]byte(`&lt;!DOCTYPE html&gt;&lt;html&gt;&lt;head&gt;&lt;meta charset="UTF-8"&gt;&lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;&lt;title&gt;Already Started&lt;/title&gt;&lt;style&gt;body{font-family:sans-serif;background:#f59e0b;color:white;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;text-align:center;}h1{font-size:48px;margin:0 0 10px 0;}p{font-size:20px;margin:0;}&lt;/style&gt;&lt;/head&gt;&lt;body&gt;&lt;div&gt;&lt;h1&gt;⚠️&lt;/h1&gt;&lt;h1&gt;Already Started&lt;/h1&gt;&lt;p&gt;You already started a bake today!&lt;/p&gt;&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;`))
+                        return
+                }</span>
+                <span class="cov8" title="1">http.Error(w, "Bake already started today", http.StatusBadRequest)
+                return</span>
+        }
+
+        // Create starter-out event to begin the bake
+        <span class="cov8" title="1">event := models.NewEvent(models.EventStarterOut)
+
+        // Check for temperature in query params
+        if tempStr := r.URL.Query().Get("temp"); tempStr != "" </span><span class="cov0" title="0">{
+                if temp, err := strconv.ParseFloat(tempStr, 64); err == nil </span><span class="cov0" title="0">{
+                        event.WithTemp(temp)
+                }</span>
+        }
+
+        <span class="cov8" title="1">if err := s.storage.AppendEvent(event); err != nil </span><span class="cov0" title="0">{
+                http.Error(w, fmt.Sprintf("Error starting bake: %v", err), http.StatusInternalServerError)
+                return
+        }</span>
+
+        // Show nice success message if accessed from browser
+        <span class="cov8" title="1">if r.Method == http.MethodGet </span><span class="cov0" title="0">{
+                w.Header().Set("Content-Type", "text/html")
+                w.Write([]byte(`&lt;!DOCTYPE html&gt;&lt;html&gt;&lt;head&gt;&lt;meta charset="UTF-8"&gt;&lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;&lt;title&gt;Bake Started&lt;/title&gt;&lt;style&gt;body{font-family:sans-serif;background:#10b981;color:white;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;text-align:center;}h1{font-size:48px;margin:0 0 10px 0;}p{font-size:20px;margin:0;}&lt;/style&gt;&lt;/head&gt;&lt;body&gt;&lt;div&gt;&lt;h1&gt;✅&lt;/h1&gt;&lt;h1&gt;Bake Started!&lt;/h1&gt;&lt;p&gt;Your loaf has been logged&lt;/p&gt;&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;`))
+                return
+        }</span>
+
+        <span class="cov8" title="1">w.Header().Set("Content-Type", "application/json")
+        json.NewEncoder(w).Encode(map[string]string{
+                "status": "bake started",
+        })</span>
+}
+
+// handleLog handles logging events
+// Supports: /log/fold, /log/shaped, /log/temp/76, etc.
+func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        if r.Method != http.MethodPost &amp;&amp; r.Method != http.MethodGet </span><span class="cov0" title="0">{
+                http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+                return
+        }</span>
+
+        // Parse the path: /log/{event} or /log/temp/{value}
+        <span class="cov8" title="1">path := strings.TrimPrefix(r.URL.Path, "/log/")
+        parts := strings.Split(path, "/")
+
+        if len(parts) == 0 || parts[0] == "" </span><span class="cov0" title="0">{
+                http.Error(w, "Event type required", http.StatusBadRequest)
+                return
+        }</span>
+
+        <span class="cov8" title="1">var event *models.Event
+
+        // Handle note logging: /log/note (expects JSON body)
+        if parts[0] == "note" </span><span class="cov8" title="1">{
+                if r.Method != http.MethodPost </span><span class="cov0" title="0">{
+                        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+                        return
+                }</span>
+
+                <span class="cov8" title="1">var noteData struct {
+                        Note string `json:"note"`
+                }
+
+                if err := json.NewDecoder(r.Body).Decode(&amp;noteData); err != nil </span><span class="cov8" title="1">{
+                        http.Error(w, "Invalid JSON body", http.StatusBadRequest)
+                        return
+                }</span>
+
+                <span class="cov8" title="1">if noteData.Note == "" </span><span class="cov8" title="1">{
+                        http.Error(w, "Note cannot be empty", http.StatusBadRequest)
+                        return
+                }</span>
+
+                <span class="cov8" title="1">event = models.NewEvent(models.EventNote)
+                event.WithNote(noteData.Note)</span>
+        } else<span class="cov8" title="1"> if parts[0] == "temp" </span><span class="cov8" title="1">{
+                // Handle temperature logging: /log/temp/76
+                if len(parts) &lt; 2 </span><span class="cov0" title="0">{
+                        http.Error(w, "Temperature value required", http.StatusBadRequest)
+                        return
+                }</span>
+
+                <span class="cov8" title="1">temp, err := strconv.ParseFloat(parts[1], 64)
+                if err != nil </span><span class="cov8" title="1">{
+                        http.Error(w, "Invalid temperature value", http.StatusBadRequest)
+                        return
+                }</span>
+
+                <span class="cov8" title="1">event = models.NewEvent(models.EventTemperature)
+
+                // Check if this is dough temp or kitchen temp
+                if r.URL.Query().Get("type") == "dough" </span><span class="cov8" title="1">{
+                        event.WithDoughTemp(temp)
+                }</span> else<span class="cov8" title="1"> {
+                        event.WithTemp(temp)
+                }</span>
+        } else<span class="cov8" title="1"> {
+                // Handle regular events
+                eventType := models.EventType(parts[0])
+
+                // Validate event type
+                validEvents := map[models.EventType]bool{
+                        models.EventStarterOut:   true,
+                        models.EventFed:          true,
+                        models.EventLevainReady:  true,
+                        models.EventMixed:        true,
+                        models.EventFold:         true,
+                        models.EventShaped:       true,
+                        models.EventFridgeIn:     true,
+                        models.EventFridgeOut:    true,
+                        models.EventOvenIn:       true,
+                        models.EventBakeComplete: true,
+                }
+
+                if !validEvents[eventType] </span><span class="cov0" title="0">{
+                        http.Error(w, fmt.Sprintf("Invalid event type: %s", eventType), http.StatusBadRequest)
+                        return
+                }</span>
+
+                <span class="cov8" title="1">event = models.NewEvent(eventType)
+
+                // Handle bake-complete with assessment data (from web UI)
+                if eventType == models.EventBakeComplete &amp;&amp; r.Method == http.MethodPost </span><span class="cov8" title="1">{
+                        var reqData struct {
+                                Assessment models.Assessment `json:"assessment"`
+                        }
+                        if err := json.NewDecoder(r.Body).Decode(&amp;reqData); err == nil </span><span class="cov8" title="1">{
+                                if event.Data == nil </span><span class="cov8" title="1">{
+                                        event.Data = make(map[string]interface{})
+                                }</span>
+                                <span class="cov8" title="1">event.Data["assessment"] = reqData.Assessment</span>
+                        }
+                }
+
+                // Handle fold count
+                <span class="cov8" title="1">if eventType == models.EventFold </span><span class="cov8" title="1">{
+                        // Try to get fold count from last event
+                        lastEvent, _ := s.storage.GetLastEvent()
+                        foldCount := 1
+                        if lastEvent != nil &amp;&amp; lastEvent.Event == models.EventFold &amp;&amp; lastEvent.FoldCount != nil </span><span class="cov8" title="1">{
+                                foldCount = *lastEvent.FoldCount + 1
+                        }</span>
+                        <span class="cov8" title="1">event.WithFoldCount(foldCount)</span>
+                }
+
+                // Check for temperature in query params
+                <span class="cov8" title="1">if tempStr := r.URL.Query().Get("temp"); tempStr != "" </span><span class="cov0" title="0">{
+                        if temp, err := strconv.ParseFloat(tempStr, 64); err == nil </span><span class="cov0" title="0">{
+                                event.WithTemp(temp)
+                        }</span>
+                }
+
+                <span class="cov8" title="1">if doughTempStr := r.URL.Query().Get("dough_temp"); doughTempStr != "" </span><span class="cov0" title="0">{
+                        if temp, err := strconv.ParseFloat(doughTempStr, 64); err == nil </span><span class="cov0" title="0">{
+                                event.WithDoughTemp(temp)
+                        }</span>
+                }
+
+                // Check for note
+                <span class="cov8" title="1">if note := r.URL.Query().Get("note"); note != "" </span><span class="cov0" title="0">{
+                        event.WithNote(note)
+                }</span>
+        }
+
+        // Save event
+        <span class="cov8" title="1">if err := s.storage.AppendEvent(event); err != nil </span><span class="cov0" title="0">{
+                http.Error(w, fmt.Sprintf("Error logging event: %v", err), http.StatusInternalServerError)
+                return
+        }</span>
+
+        // Show nice success message if accessed from browser (GET request)
+        <span class="cov8" title="1">if r.Method == http.MethodGet </span><span class="cov0" title="0">{
+                eventName := string(event.Event)
+                w.Header().Set("Content-Type", "text/html")
+                successHTML := fmt.Sprintf(`&lt;!DOCTYPE html&gt;&lt;html&gt;&lt;head&gt;&lt;meta charset="UTF-8"&gt;&lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;&lt;title&gt;Event Logged&lt;/title&gt;&lt;style&gt;body{font-family:sans-serif;background:#10b981;color:white;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;text-align:center;}h1{font-size:48px;margin:0 0 10px 0;}p{font-size:20px;margin:0;}.time{opacity:0.8;font-size:16px;margin-top:10px;}&lt;/style&gt;&lt;/head&gt;&lt;body&gt;&lt;div&gt;&lt;h1&gt;✅&lt;/h1&gt;&lt;h1&gt;%s&lt;/h1&gt;&lt;p&gt;Event logged successfully&lt;/p&gt;&lt;p class="time"&gt;%s&lt;/p&gt;&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;`, eventName, event.Timestamp.Format("3:04 PM"))
+                w.Write([]byte(successHTML))
+                return
+        }</span>
+
+        <span class="cov8" title="1">w.Header().Set("Content-Type", "application/json")
+        json.NewEncoder(w).Encode(map[string]interface{}{
+                "status": "logged",
+                "event":  event,
+        })</span>
+}
+
+// handleStatus returns the current bake status
+func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        if r.Method != http.MethodGet </span><span class="cov8" title="1">{
+                http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+                return
+        }</span>
+
+        <span class="cov8" title="1">bake, err := s.storage.ReadCurrentBake()
+        if err != nil </span><span class="cov0" title="0">{
+                http.Error(w, fmt.Sprintf("Error reading bake: %v", err), http.StatusInternalServerError)
+                return
+        }</span>
+
+        <span class="cov8" title="1">w.Header().Set("Content-Type", "application/json")
+        json.NewEncoder(w).Encode(bake)</span>
+}
+
+// handleTempPage serves the temperature logging web UI
+func (s *Server) handleTempPage(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        w.Header().Set("Content-Type", "text/html")
+        w.Write([]byte(tempPageHTML))
+}</span>
+
+// handleNotesPage serves the notes logging web UI
+func (s *Server) handleNotesPage(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        w.Header().Set("Content-Type", "text/html")
+        w.Write([]byte(notesPageHTML))
+}</span>
+
+// handleCompletePage serves the bake completion assessment web UI
+func (s *Server) handleCompletePage(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        w.Header().Set("Content-Type", "text/html")
+        w.Write([]byte(completePageHTML))
+}</span>
+
+// handleQRCodePDF serves the QR codes PDF file
+func (s *Server) handleQRCodePDF(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        pdfPath := "./qrcodes/qrcodes.pdf"
+
+        // Check if file exists
+        if _, err := os.Stat(pdfPath); os.IsNotExist(err) </span><span class="cov0" title="0">{
+                http.Error(w, "QR codes PDF not found. Generate it with: ./bin/qrgen http://YOUR_SERVER_URL:8080", http.StatusNotFound)
+                return
+        }</span>
+
+        // Read the PDF file
+        <span class="cov8" title="1">pdfData, err := os.ReadFile(pdfPath)
+        if err != nil </span><span class="cov0" title="0">{
+                http.Error(w, "Error reading PDF file", http.StatusInternalServerError)
+                return
+        }</span>
+
+        // Serve the PDF
+        <span class="cov8" title="1">w.Header().Set("Content-Type", "application/pdf")
+        w.Header().Set("Content-Disposition", "inline; filename=sourdough-qrcodes.pdf")
+        w.Write(pdfData)</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package storage
+
+import (
+        "bufio"
+        "encoding/json"
+        "fmt"
+        "os"
+        "path/filepath"
+        "sort"
+        "strings"
+        "sync"
+        "time"
+
+        "github.com/mdeckert/sourdough/internal/models"
+)
+
+// Storage handles reading and writing bake data
+type Storage struct {
+        dataDir string
+        mu      sync.RWMutex
+}
+
+// New creates a new Storage instance
+func New(dataDir string) (*Storage, error) <span class="cov8" title="1">{
+        // Create data directory if it doesn't exist
+        if err := os.MkdirAll(dataDir, 0755); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to create data directory: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return &amp;Storage{
+                dataDir: dataDir,
+        }, nil</span>
+}
+
+// getCurrentBakeFile returns the path to the current active bake file
+// An active bake is one that hasn't been completed (no bake-complete event)
+func (s *Storage) getCurrentBakeFile() string <span class="cov8" title="1">{
+        // First, check if there's an active bake (most recent file without bake-complete)
+        files, err := os.ReadDir(s.dataDir)
+        if err != nil </span><span class="cov0" title="0">{
+                // If we can't read dir, fall back to today's date
+                date := time.Now().Format("2006-01-02")
+                return filepath.Join(s.dataDir, fmt.Sprintf("bake_%s.jsonl", date))
+        }</span>
+
+        // Sort files by modification time (most recent first)
+        <span class="cov8" title="1">var bakeFiles []struct {
+                name    string
+                modTime time.Time
+        }
+
+        for _, file := range files </span><span class="cov8" title="1">{
+                if file.IsDir() || !strings.HasPrefix(file.Name(), "bake_") || !strings.HasSuffix(file.Name(), ".jsonl") </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+                <span class="cov8" title="1">info, err := file.Info()
+                if err != nil </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+                <span class="cov8" title="1">bakeFiles = append(bakeFiles, struct {
+                        name    string
+                        modTime time.Time
+                }{file.Name(), info.ModTime()})</span>
+        }
+
+        <span class="cov8" title="1">sort.Slice(bakeFiles, func(i, j int) bool </span><span class="cov0" title="0">{
+                return bakeFiles[i].modTime.After(bakeFiles[j].modTime)
+        }</span>)
+
+        // Check most recent files for active bake (no bake-complete event)
+        <span class="cov8" title="1">for _, bf := range bakeFiles </span><span class="cov8" title="1">{
+                filePath := filepath.Join(s.dataDir, bf.name)
+                if !s.isCompleted(filePath) </span><span class="cov8" title="1">{
+                        return filePath
+                }</span>
+        }
+
+        // No active bake found, create new one with current timestamp
+        <span class="cov8" title="1">date := time.Now().Format("2006-01-02_15-04")
+        return filepath.Join(s.dataDir, fmt.Sprintf("bake_%s.jsonl", date))</span>
+}
+
+// isCompleted checks if a bake file has a bake-complete event
+func (s *Storage) isCompleted(filePath string) bool <span class="cov8" title="1">{
+        f, err := os.Open(filePath)
+        if err != nil </span><span class="cov0" title="0">{
+                return false
+        }</span>
+        <span class="cov8" title="1">defer f.Close()
+
+        scanner := bufio.NewScanner(f)
+        for scanner.Scan() </span><span class="cov8" title="1">{
+                var event models.Event
+                if err := json.Unmarshal(scanner.Bytes(), &amp;event); err != nil </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+                <span class="cov8" title="1">if event.Event == models.EventBakeComplete </span><span class="cov8" title="1">{
+                        return true
+                }</span>
+        }
+        <span class="cov8" title="1">return false</span>
+}
+
+// getBakeFile returns the path to a specific bake file by date
+func (s *Storage) getBakeFile(date string) string <span class="cov0" title="0">{
+        return filepath.Join(s.dataDir, fmt.Sprintf("bake_%s.jsonl", date))
+}</span>
+
+// AppendEvent appends an event to the current bake file
+func (s *Storage) AppendEvent(event *models.Event) error <span class="cov8" title="1">{
+        s.mu.Lock()
+        defer s.mu.Unlock()
+
+        filePath := s.getCurrentBakeFile()
+
+        // Open file in append mode, create if doesn't exist
+        f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to open bake file: %w", err)
+        }</span>
+        <span class="cov8" title="1">defer f.Close()
+
+        // Encode event as JSON and write
+        encoder := json.NewEncoder(f)
+        if err := encoder.Encode(event); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to write event: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+// ReadCurrentBake reads all events from the current active bake
+func (s *Storage) ReadCurrentBake() (*models.Bake, error) <span class="cov8" title="1">{
+        s.mu.RLock()
+        defer s.mu.RUnlock()
+
+        filePath := s.getCurrentBakeFile()
+
+        // Check if file exists
+        if _, err := os.Stat(filePath); os.IsNotExist(err) </span><span class="cov8" title="1">{
+                return &amp;models.Bake{
+                        Date:   time.Now().Format("2006-01-02"),
+                        Events: []models.Event{},
+                }, nil
+        }</span>
+
+        <span class="cov8" title="1">f, err := os.Open(filePath)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to open bake file: %w", err)
+        }</span>
+        <span class="cov8" title="1">defer f.Close()
+
+        var events []models.Event
+        scanner := bufio.NewScanner(f)
+
+        for scanner.Scan() </span><span class="cov8" title="1">{
+                var event models.Event
+                if err := json.Unmarshal(scanner.Bytes(), &amp;event); err != nil </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+                <span class="cov8" title="1">events = append(events, event)</span>
+        }
+
+        <span class="cov8" title="1">if err := scanner.Err(); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("error reading bake file: %w", err)
+        }</span>
+
+        // Extract date from first event or use today
+        <span class="cov8" title="1">date := time.Now().Format("2006-01-02")
+        if len(events) &gt; 0 </span><span class="cov8" title="1">{
+                date = events[0].Timestamp.Format("2006-01-02")
+        }</span>
+
+        <span class="cov8" title="1">bake := &amp;models.Bake{
+                Date:   date,
+                Events: events,
+        }
+
+        // Check if last event is bake-complete with assessment
+        if len(events) &gt; 0 </span><span class="cov8" title="1">{
+                lastEvent := events[len(events)-1]
+                if lastEvent.Event == models.EventBakeComplete &amp;&amp; lastEvent.Data != nil </span><span class="cov8" title="1">{
+                        if assessmentData, ok := lastEvent.Data["assessment"]; ok </span><span class="cov8" title="1">{
+                                assessmentJSON, _ := json.Marshal(assessmentData)
+                                var assessment models.Assessment
+                                if json.Unmarshal(assessmentJSON, &amp;assessment) == nil </span><span class="cov8" title="1">{
+                                        bake.Assessment = &amp;assessment
+                                }</span>
+                        }
+                }
+        }
+
+        <span class="cov8" title="1">return bake, nil</span>
+}
+
+// ReadBake reads all events from a specific bake by date
+func (s *Storage) ReadBake(date string) (*models.Bake, error) <span class="cov0" title="0">{
+        s.mu.RLock()
+        defer s.mu.RUnlock()
+
+        filePath := s.getBakeFile(date)
+
+        // Check if file exists
+        if _, err := os.Stat(filePath); os.IsNotExist(err) </span><span class="cov0" title="0">{
+                return &amp;models.Bake{
+                        Date:   date,
+                        Events: []models.Event{},
+                }, nil
+        }</span>
+
+        <span class="cov0" title="0">f, err := os.Open(filePath)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to open bake file: %w", err)
+        }</span>
+        <span class="cov0" title="0">defer f.Close()
+
+        var events []models.Event
+        scanner := bufio.NewScanner(f)
+
+        for scanner.Scan() </span><span class="cov0" title="0">{
+                var event models.Event
+                if err := json.Unmarshal(scanner.Bytes(), &amp;event); err != nil </span><span class="cov0" title="0">{
+                        // Skip malformed lines
+                        continue</span>
+                }
+                <span class="cov0" title="0">events = append(events, event)</span>
+        }
+
+        <span class="cov0" title="0">if err := scanner.Err(); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("error reading bake file: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">bake := &amp;models.Bake{
+                Date:   date,
+                Events: events,
+        }
+
+        // Check if last event is an assessment (bake-complete with assessment data)
+        if len(events) &gt; 0 </span><span class="cov0" title="0">{
+                lastEvent := events[len(events)-1]
+                if lastEvent.Event == models.EventBakeComplete &amp;&amp; lastEvent.Data != nil </span><span class="cov0" title="0">{
+                        // Try to extract assessment from data
+                        if assessmentData, ok := lastEvent.Data["assessment"]; ok </span><span class="cov0" title="0">{
+                                assessmentJSON, _ := json.Marshal(assessmentData)
+                                var assessment models.Assessment
+                                if json.Unmarshal(assessmentJSON, &amp;assessment) == nil </span><span class="cov0" title="0">{
+                                        bake.Assessment = &amp;assessment
+                                }</span>
+                        }
+                }
+        }
+
+        <span class="cov0" title="0">return bake, nil</span>
+}
+
+// ListBakes returns a list of all bake dates in descending order
+func (s *Storage) ListBakes() ([]string, error) <span class="cov8" title="1">{
+        s.mu.RLock()
+        defer s.mu.RUnlock()
+
+        files, err := os.ReadDir(s.dataDir)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to read data directory: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">var dates []string
+        for _, file := range files </span><span class="cov8" title="1">{
+                if file.IsDir() </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+
+                <span class="cov8" title="1">name := file.Name()
+                if strings.HasPrefix(name, "bake_") &amp;&amp; strings.HasSuffix(name, ".jsonl") </span><span class="cov8" title="1">{
+                        // Extract date from filename: bake_2025-10-07.jsonl -&gt; 2025-10-07
+                        date := strings.TrimSuffix(strings.TrimPrefix(name, "bake_"), ".jsonl")
+                        dates = append(dates, date)
+                }</span>
+        }
+
+        // Sort in descending order (most recent first)
+        <span class="cov8" title="1">sort.Slice(dates, func(i, j int) bool </span><span class="cov8" title="1">{
+                return dates[i] &gt; dates[j]
+        }</span>)
+
+        <span class="cov8" title="1">return dates, nil</span>
+}
+
+// HasCurrentBake checks if there's an active (uncompleted) bake
+func (s *Storage) HasCurrentBake() (bool, error) <span class="cov8" title="1">{
+        filePath := s.getCurrentBakeFile()
+
+        // Check if file exists
+        if _, err := os.Stat(filePath); os.IsNotExist(err) </span><span class="cov8" title="1">{
+                return false, nil
+        }</span>
+
+        // Check if it has events and isn't completed
+        <span class="cov8" title="1">bake, err := s.ReadCurrentBake()
+        if err != nil </span><span class="cov0" title="0">{
+                return false, err
+        }</span>
+
+        <span class="cov8" title="1">if len(bake.Events) == 0 </span><span class="cov0" title="0">{
+                return false, nil
+        }</span>
+
+        // Check if the bake is completed
+        <span class="cov8" title="1">for _, event := range bake.Events </span><span class="cov8" title="1">{
+                if event.Event == models.EventBakeComplete </span><span class="cov8" title="1">{
+                        return false, nil
+                }</span>
+        }
+
+        <span class="cov8" title="1">return true, nil</span>
+}
+
+// GetLastEvent returns the most recent event from the current bake
+func (s *Storage) GetLastEvent() (*models.Event, error) <span class="cov8" title="1">{
+        bake, err := s.ReadCurrentBake()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">if len(bake.Events) == 0 </span><span class="cov8" title="1">{
+                return nil, nil
+        }</span>
+
+        <span class="cov8" title="1">return &amp;bake.Events[len(bake.Events)-1], nil</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

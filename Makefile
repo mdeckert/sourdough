@@ -55,10 +55,28 @@ run: server
 	@echo "Starting server..."
 	@./bin/sourdough-server
 
-# Run tests
+# Run unit tests
 test:
-	@echo "Running tests..."
+	@echo "Running unit tests..."
 	@go test -v ./...
+
+# Run unit tests with coverage
+test-coverage:
+	@echo "Running tests with coverage..."
+	@go test -v -coverprofile=coverage.out ./...
+	@go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report generated: coverage.html"
+
+# Run integration tests (requires server to be running)
+test-integration:
+	@echo "Running integration tests..."
+	@./test/integration_test.sh
+
+# Run all tests (unit + integration)
+test-all: test
+	@echo ""
+	@echo "Running integration tests..."
+	@./test/integration_test.sh
 
 # Download dependencies
 deps:
@@ -78,5 +96,8 @@ help:
 	@echo "  make uninstall-service - Stop and remove systemd service"
 	@echo "  make run              - Run server in foreground"
 	@echo "  make clean            - Remove build artifacts"
-	@echo "  make test             - Run tests"
+	@echo "  make test             - Run unit tests"
+	@echo "  make test-coverage    - Run tests with coverage report"
+	@echo "  make test-integration - Run integration tests"
+	@echo "  make test-all         - Run all tests (unit + integration)"
 	@echo "  make deps             - Download dependencies"
