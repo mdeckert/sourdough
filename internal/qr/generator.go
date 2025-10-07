@@ -156,7 +156,7 @@ func generatePDF(events []EventQR, qrDir, outputPath string) error {
 	pdf.SetTextColor(80, 80, 80)
 
 	workflow := []string{
-		"WORKFLOW: START LOAF \u2192 Fed \u2192 Levain Ready \u2192 Mixed \u2192 Fold (3-4x) \u2192 Shaped \u2192 Fridge In \u2192 Oven In \u2192 COMPLETE",
+		"WORKFLOW: START LOAF -> Fed -> Levain Ready -> Mixed -> Fold (3-4x) -> Shaped -> Fridge In -> Oven In -> COMPLETE",
 		"",
 		"LOG TEMP: Scan anytime to log kitchen/dough temperature (critical for timing)",
 		"ADD NOTE: Scan anytime to add observations (crumb, taste, process notes)",
