@@ -1,0 +1,109 @@
+Sourdough Bread Logging System - Project Structure
+===================================================
+
+sourdough/
+├── cmd/                          # Binary entry points
+│   ├── server/
+│   │   └── main.go              # HTTP server (runs 24/7)
+│   ├── sourdough/
+│   │   └── main.go              # CLI tool
+│   └── qrgen/
+│       └── main.go              # QR code generator
+│
+├── internal/                     # Internal packages
+│   ├── models/
+│   │   └── events.go            # Event types and data models
+│   ├── storage/
+│   │   └── jsonl.go             # JSON Lines file operations
+│   ├── server/
+│   │   └── handlers.go          # HTTP request handlers
+│   └── qr/
+│       └── generator.go         # QR code generation logic
+│
+├── scripts/
+│   └── get-server-ip.sh         # Helper to find server IP
+│
+├── bin/                          # Compiled binaries (created on build)
+│   ├── sourdough-server
+│   ├── sourdough
+│   └── qrgen
+│
+├── data/                         # Bake data (created at runtime)
+│   ├── bake_2025-10-07.jsonl
+│   └── bake_2025-10-08.jsonl
+│
+├── qrcodes/                      # Generated QR codes
+│   ├── starter-out.png
+│   ├── fed.png
+│   ├── fold.png
+│   ├── ...
+│   └── sheet.png                # Printable sheet
+│
+├── go.mod                        # Go module definition
+├── Makefile                      # Build automation
+├── install.sh                    # Installation script
+├── sourdough.service            # Systemd service definition
+│
+├── README.md                     # Overview and usage
+├── SETUP.md                      # Detailed setup guide
+├── QUICK_START.md               # Daily workflow reference
+├── PROJECT_STRUCTURE.txt        # This file
+└── example_bake.jsonl           # Sample data format
+
+Key Features
+============
+
+Server (HTTP API)
+-----------------
+- Endpoints: /health, /bake/start, /log/{event}, /log/temp/{value}, /status
+- Runs on port 8080 (configurable)
+- Lightweight, suitable for 24/7 operation
+- Stores data in JSON Lines format
+
+CLI Tool
+--------
+- Commands: start, log, temp, status, complete, history, review
+- Interactive assessments
+- Formatted timeline output with durations
+- Works via SSH
+
+QR Code System
+--------------
+- Generate codes for all common events
+- Point to HTTP endpoints
+- Scan with phone → instant logging
+- No app required!
+
+Data Storage
+------------
+- One .jsonl file per bake
+- Human-readable JSON format
+- Easy to backup and analyze
+- Example: bake_2025-10-07.jsonl
+
+Workflow
+========
+
+1. Install: ./install.sh
+2. Start bake: sourdough start (or scan QR)
+3. Log events: sourdough log fold (or scan QR)
+4. Check status: sourdough status
+5. Complete: sourdough complete (assessment)
+6. Review: sourdough history / sourdough review 2025-10-07
+
+Event Timeline
+==============
+
+starter-out → fed → levain-ready → mixed → fold (x3-4) → shaped 
+   → fridge-in → [overnight] → fridge-out → oven-in → bake-complete
+
+Temperature tracking throughout for timing correlation analysis.
+
+Future Enhancements
+===================
+
+- Analysis: Correlate temps with outcomes
+- Predictions: Suggest timing based on current temp
+- Reminders: Alert when next action is due
+- Graphs: Visualize fermentation curves
+- Export: CSV/Excel for external analysis

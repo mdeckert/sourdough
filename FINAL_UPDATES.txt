@@ -1,0 +1,172 @@
+================================================================================
+SOURDOUGH LOGGER - FINAL UPDATES
+================================================================================
+
+Date: 2025-10-07
+
+CHANGES MADE
+================================================================================
+
+1. Label Change: START BAKE → START LOAF ✓
+   -------------------------------------------
+   - QR code label changed from "START BAKE" to "START LOAF"
+   - More accurately reflects taking starter out of freezer
+   - Still calls /bake/start endpoint
+
+2. Notes Feature Added ✓
+   ----------------------
+   - NEW QR code: "ADD NOTE"
+   - Opens beautiful web UI for adding notes
+   - Perfect for:
+     ✓ Crumb observations
+     ✓ Tasting notes
+     ✓ Process observations
+     ✓ Quick thoughts during the bake
+
+   Features:
+   - Free-form text entry
+   - Quick phrase buttons:
+     • Good oven spring
+     • Underproofed / Overproofed
+     • Dense crumb / Open crumb
+     • Great flavor / Too sour / Not sour enough
+     • Crust too dark / Perfect crust
+   - Character counter
+   - Mobile-optimized
+   - Notes always attach to current bake
+
+CURRENT QR CODES (12 Total)
+================================================================================
+
+All fit on one page, 4 columns:
+
+Event Codes:
+  1. START LOAF     - Take starter out, begin new bake
+  2. Fed            - Feed starter
+  3. Levain Ready   - Levain doubled
+  4. Mixed          - Mix dough, start bulk ferment
+  5. Fold           - Fold dough (auto-counts)
+  6. Shaped         - Shape loaf
+  7. Fridge In      - Cold proof begins
+  8. Fridge Out     - Remove from fridge
+  9. Oven In        - Baking begins
+  10. Bake Done     - Baking complete
+
+Web UI Codes:
+  11. LOG TEMP      - Enter temperature (60-80°F)
+  12. ADD NOTE      - Add observations/notes
+
+NOTES WORKFLOW
+================================================================================
+
+Scan "ADD NOTE" QR code any time during your bake:
+
+Example Uses:
+  - After mixing: "Dough feels sticky, added 10g more flour"
+  - During bulk: "Lots of bubbles forming on surface"
+  - After shaping: "Dough held shape well, nice tension"
+  - After baking: "Great oven spring! Crust darker than usual"
+  - After tasting: "Tangy flavor, very open crumb, slight gumminess"
+
+Quick Phrases:
+  Tap buttons to quickly add common observations:
+  - Good oven spring
+  - Underproofed
+  - Dense crumb
+  - Great flavor
+  - Crust too dark
+  - etc.
+
+All notes are timestamped and attached to current bake!
+
+HOW TO USE NOTES
+================================================================================
+
+Method 1: QR Code (Recommended)
+  1. Scan "ADD NOTE" QR code
+  2. Web page opens
+  3. Optionally tap quick phrase buttons
+  4. Type your note
+  5. Tap "Add Note"
+  6. Done!
+
+Method 2: Direct URL
+  Open: http://192.168.1.50:8080/notes
+
+Method 3: CLI
+  (Coming soon - not implemented yet)
+
+WHERE NOTES ARE STORED
+================================================================================
+
+Notes are logged as events in your bake file:
+
+Example:
+  {"timestamp":"2025-10-07T18:39:57Z","event":"note","note":"Test note"}
+
+View notes in timeline:
+  sourdough status
+
+Example output:
+  18:30  starter-out
+  18:30  temperature     [73.0°F] (+0m)
+  18:39  note            - Test note (+9m)
+  19:00  mixed           [76.0°F] (+21m)
+  19:05  note            - Dough feels great (+5m)
+
+BENEFITS
+================================================================================
+
+✓ Capture observations in the moment
+✓ Document crumb quality after slicing
+✓ Record tasting notes
+✓ Track process adjustments
+✓ Build a knowledge base over time
+✓ Correlate notes with outcomes
+
+After 5-10 bakes, you'll be able to:
+  - Review what worked vs what didn't
+  - See patterns in successful bakes
+  - Remember what you changed each time
+
+TESTING
+================================================================================
+
+Test notes functionality:
+  1. Visit: http://192.168.1.50:8080/notes
+  2. Or scan "ADD NOTE" QR code
+  3. Enter a note: "Testing notes feature"
+  4. Submit
+  5. Check with: sourdough status
+
+FILES UPDATED
+================================================================================
+
+- internal/qr/generator.go       - Added notes QR, changed label
+- internal/server/handlers.go    - Added /notes endpoint, /log/note handler
+- internal/server/templates.go   - Added notesPageHTML
+- qrcodes/qrcodes.pdf           - Regenerated with 12 codes
+
+SUMMARY
+================================================================================
+
+Total QR codes: 12 (all on one page)
+  - 10 event codes
+  - 2 web UI codes (temp + notes)
+
+New Features:
+  ✓ START LOAF label (clearer meaning)
+  ✓ Notes web UI (rich text entry)
+  ✓ Quick phrase buttons
+  ✓ Timestamped observations
+  ✓ Integrated into timeline
+
+Your system is now complete for:
+  1. Starting bakes
+  2. Logging events
+  3. Recording temperatures (1-degree precision)
+  4. Adding notes and observations
+  5. Tracking everything in one place
+
+Ready to optimize your sourdough process! 🍞
+================================================================================

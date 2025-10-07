@@ -1,0 +1,181 @@
+================================================================================
+MAJOR UPDATE - Multi-Day Bakes + New Features
+================================================================================
+
+Date: 2025-10-07
+
+ISSUES FIXED
+================================================================================
+
+1. **Multi-Day Bake Support** ✅
+   Problem: System created one file per calendar day, breaking overnight bakes
+   Solution: Now tracks "active bakes" - bakes without bake-complete event
+
+   How it works:
+   - File names include timestamp: bake_2025-10-07_19-06.jsonl
+   - System finds most recent file without bake-complete event
+   - START LOAF only starts new bake if no active bake exists
+   - Can log events across multiple days seamlessly
+
+2. **"Already Started" Error** ✅
+   Problem: Scanning START LOAF showed error even on first scan
+   Solution: Fixed multi-day detection logic (was related to #1)
+
+NEW FEATURES
+================================================================================
+
+1. **COMPLETE QR Code + Web UI** 📊
+   - New QR code: "COMPLETE"
+   - Opens beautiful mobile form for bake assessment
+   - Rate: Proof level, Crumb (1-10), Browning, Score (1-10)
+   - Add notes
+   - Uses sliders and radio buttons for easy mobile input
+   - Marks bake as complete, allowing new bake to start
+
+2. **GET QR CODES QR Code** 📄
+   - New QR code: "GET QR CODES"
+   - Scans → downloads the PDF directly to your phone
+   - Endpoint: /qrcodes.pdf
+   - Perfect for sharing or reprinting
+
+TOTAL QR CODES: 13
+================================================================================
+
+Event Codes (9):
+  1. START LOAF     - Begin new bake (only if no active bake)
+  2. Fed            - Feed starter
+  3. Levain Ready   - Levain doubled
+  4. Mixed          - Mix dough
+  5. Fold           - Fold dough (auto-counts)
+  6. Shaped         - Shape loaf
+  7. Fridge In      - Cold proof begins
+  8. Fridge Out     - Remove from fridge
+  9. Oven In        - Start baking
+
+Web UI Codes (4):
+  10. LOG TEMP      - Enter temperature (60-80°F)
+  11. ADD NOTE      - Add observations/notes
+  12. COMPLETE      - Finish bake with assessment
+  13. GET QR CODES  - Download PDF
+
+MULTI-DAY WORKFLOW EXAMPLE
+================================================================================
+
+Day 1 - Morning:
+  08:00  Scan START LOAF        → Bake started
+  08:30  Scan LOG TEMP (68°F)
+  12:00  Scan Fed
+  18:00  Scan Levain Ready
+
+Day 1 - Evening:
+  18:15  Scan Mixed
+  19:00  Scan LOG TEMP (76°F)
+  19:15  Scan Fold
+  20:15  Scan Fold
+  21:15  Scan Fold
+  22:30  Scan Shaped
+  22:45  Scan Fridge In
+
+Day 2 - Morning:
+  10:00  Scan Fridge Out
+  10:30  Scan Oven In
+  11:15  Scan COMPLETE
+         → Assessment form opens
+         → Rate proof, crumb, browning, score
+         → Bake marked complete
+         → Can start new bake tomorrow!
+
+TECHNICAL CHANGES
+================================================================================
+
+Storage Layer (internal/storage/jsonl.go):
+  - getCurrentBakeFile() now finds active bake (no bake-complete)
+  - Files named with timestamp for uniqueness
+  - ReadCurrentBake() reads from active bake file
+  - HasCurrentBake() checks for uncompleted bakes
+  - isCompleted() helper checks for bake-complete event
+
+Server (internal/server/handlers.go):
+  - /complete endpoint serves assessment web UI
+  - /qrcodes.pdf endpoint serves PDF file
+  - /log/bake-complete accepts assessment JSON
+  - Fixed GET request support for all QR codes
+
+QR Generator (internal/qr/generator.go):
+  - Added "complete" QR code
+  - Added "qr-pdf" QR code
+  - Now generates 13 codes total
+
+Templates (internal/server/templates.go):
+  - New completePageHTML with assessment form
+  - Sliders for scores (1-10)
+  - Radio buttons for categorical choices
+  - Mobile-optimized design
+
+TESTING COMPLETED
+================================================================================
+
+✅ Multi-day bakes work correctly
+✅ Can't start second bake while one is active
+✅ After completing bake, can start new one
+✅ All 13 QR codes generated
+✅ Complete assessment form works
+✅ PDF serving works
+✅ CLI commands work with new storage
+✅ Server endpoints return proper responses
+
+USAGE EXAMPLES
+================================================================================
+
+Start a bake (Day 1):
+  Scan START LOAF  → "Bake Started!" ✅
+
+Try to start another:
+  Scan START LOAF  → "Already Started" ⚠️
+
+Log events across days:
+  Day 1: Scan Mixed, Fold, Shaped, Fridge In
+  Day 2: Scan Fridge Out, Oven In
+
+Complete the bake:
+  Scan COMPLETE → Assessment form
+  Rate: Underproofed, Crumb: 7/10, Browning: Slight, Score: 8/10
+  Submit → "Bake completed!" ✅
+
+Start next bake:
+  Scan START LOAF  → "Bake Started!" ✅  (works now!)
+
+Get QR codes on phone:
+  Scan GET QR CODES → PDF downloads
+
+BENEFITS
+================================================================================
+
+✓ Natural workflow for overnight cold proof
+✓ Can track full bake from start to finish
+✓ Assessment data for analysis
+✓ Easy to complete bake from phone
+✓ Can share/reprint QR codes easily
+✓ One active bake at a time (prevents confusion)
+✓ Clean data structure for analysis
+
+FILES UPDATED
+================================================================================
+
+- internal/storage/jsonl.go       - Multi-day bake support
+- internal/server/handlers.go     - New endpoints, assessment handling
+- internal/server/templates.go    - Complete assessment UI
+- internal/qr/generator.go        - Added 2 new QR codes
+- qrcodes/qrcodes.pdf            - Regenerated with 13 codes
+
+KNOWN BEHAVIOR
+================================================================================
+
+- File names now include timestamp: bake_2025-10-07_19-06.jsonl
+- Can only have ONE active (uncompleted) bake at a time
+- Scanning START LOAF when bake is active shows warning
+- After COMPLETE, system allows new bake
+- Old bakes are preserved and can be reviewed with sourdough history
+
+Your sourdough logging system is now production-ready! 🍞
+================================================================================

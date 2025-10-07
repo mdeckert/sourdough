@@ -1,0 +1,144 @@
+================================================================================
+SOURDOUGH LOGGER - UPDATES APPLIED
+================================================================================
+
+Date: 2025-10-07
+
+CHANGES MADE
+================================================================================
+
+1. QR Code PDF - Smaller & More Per Page
+   ----------------------------------------
+   - QR codes reduced from 50mm to 35mm (30% smaller)
+   - Layout changed from 3 columns to 4 columns
+   - Font size optimized for smaller codes
+   - Result: All 11 codes fit on a single page!
+
+2. Starter-Out → Start Bake
+   --------------------------
+   - "Starter Out" QR code renamed to "START BAKE"
+   - Now calls /bake/start endpoint directly
+   - Scanning this QR starts a new bake session
+
+3. Temperature Input - Web UI Added
+   ----------------------------------
+   - New web page at: http://192.168.1.50:8080/temp
+   - Single "LOG TEMP" QR code instead of 20 individual codes
+   - Features:
+     ✓ Enter any temperature (60-80°F) with 1-degree precision
+     ✓ Quick select buttons for common temps (68, 70, 72, 74, 76, 78°F)
+     ✓ Choose "Kitchen" or "Dough" temperature type
+     ✓ Beautiful, mobile-friendly interface
+     ✓ Instant feedback on success/error
+     ✓ Works great on phone
+
+4. Removed Individual Temperature QR Codes
+   ----------------------------------------
+   - No more temp-70, temp-72, temp-74, etc.
+   - Single "LOG TEMP" QR code opens web form
+   - Cleaner, more flexible solution
+
+NEW QR CODES
+================================================================================
+
+Total: 11 QR codes (all fit on one page!)
+
+Event Codes (10):
+  1. START BAKE     - Begins new bake session
+  2. Fed            - Log starter feeding
+  3. Levain Ready   - Levain is ready
+  4. Mixed          - Dough mixed (bulk ferment start)
+  5. Fold           - Log fold (auto-increments)
+  6. Shaped         - Dough shaped
+  7. Fridge In      - Into cold proof
+  8. Fridge Out     - Out of fridge
+  9. Oven In        - Baking started
+  10. Bake Done     - Baking complete
+
+Temperature Code (1):
+  11. LOG TEMP      - Opens web form for temp input
+
+WORKFLOW CHANGES
+================================================================================
+
+Old Temperature Workflow:
+  Scan specific QR code (temp-76, temp-78, etc.)
+  Limited to pre-defined temperatures
+
+New Temperature Workflow:
+  1. Scan "LOG TEMP" QR code
+  2. Web page opens on phone
+  3. Enter exact temperature (e.g., 73°F)
+  4. Select Kitchen or Dough
+  5. Tap "Log Temperature"
+  6. Done!
+
+TESTING
+================================================================================
+
+Test the new temp UI:
+  1. Open in browser: http://192.168.1.50:8080/temp
+  2. Or scan the "LOG TEMP" QR code
+  3. Enter a temperature and submit
+  4. Check with: sourdough status
+
+Test START BAKE:
+  1. Scan the "START BAKE" QR code
+  2. Should start a new bake session
+  3. Verify with: sourdough status
+
+PRINT THE NEW PDF
+================================================================================
+
+Location: /home/mdeckert/sourdough/qrcodes/qrcodes.pdf
+
+Benefits of new layout:
+  ✓ All codes on one page
+  ✓ Smaller, easier to cut out
+  ✓ More space-efficient on fridge
+  ✓ Cleaner organization
+
+FILES UPDATED
+================================================================================
+
+- internal/qr/generator.go       - QR code generation logic
+- internal/server/handlers.go    - Added /temp endpoint
+- internal/server/templates.go   - NEW: Temperature web UI
+- qrcodes/qrcodes.pdf           - Regenerated with new layout
+
+BACKWARDS COMPATIBILITY
+================================================================================
+
+All existing CLI commands still work:
+  sourdough start       - Still works
+  sourdough temp 76     - Still works
+  sourdough log fold    - Still works
+
+The old temperature QR codes (temp-70, etc.) are removed, but you can
+still log temps via:
+  - New web UI (recommended)
+  - CLI: sourdough temp 76
+  - URL: http://192.168.1.50:8080/log/temp/76
+
+ADVANTAGES
+================================================================================
+
+1. Single-degree precision (60-80°F range)
+2. Only 11 QR codes instead of 25+
+3. All fit on one printed page
+4. Flexible temperature input
+5. Better user experience on phone
+6. Still fast and easy to use
+
+NEXT STEPS
+================================================================================
+
+1. Download new qrcodes/qrcodes.pdf
+2. Print it
+3. Cut out the 11 QR codes
+4. Stick on fridge
+5. Test the "LOG TEMP" QR code
+6. Start baking!
+
+The system is now optimized for your workflow! 🍞
+================================================================================

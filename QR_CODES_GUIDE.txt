@@ -1,0 +1,180 @@
+================================================================================
+SOURDOUGH QR CODES - QUICK REFERENCE
+================================================================================
+
+WHAT YOU HAVE
+================================================================================
+
+📄 PDF File: qrcodes/qrcodes.pdf (11 codes, 1 page)
+
+All QR codes point to: http://192.168.1.50:8080
+
+QR CODE LIST
+================================================================================
+
+1. START BAKE ⭐
+   URL: /bake/start
+   Use: First thing when taking starter out of freezer
+   Effect: Creates new bake session for today
+
+2. Fed
+   URL: /log/fed
+   Use: After feeding starter
+
+3. Levain Ready
+   URL: /log/levain-ready
+   Use: When levain has doubled
+
+4. Mixed
+   URL: /log/mixed
+   Use: When you mix dough (bulk fermentation starts)
+
+5. Fold
+   URL: /log/fold
+   Use: Each time you fold (auto-counts: fold #1, #2, #3, etc.)
+
+6. Shaped
+   URL: /log/shaped
+   Use: After shaping loaf
+
+7. Fridge In
+   URL: /log/fridge-in
+   Use: When you put dough in fridge for cold proof
+
+8. Fridge Out
+   URL: /log/fridge-out
+   Use: When you take dough out of fridge
+
+9. Oven In
+   URL: /log/oven-in
+   Use: When bread goes in oven
+
+10. Bake Done
+    URL: /log/bake-complete
+    Use: When baking is finished
+
+11. LOG TEMP 🌡️
+    URL: /temp
+    Use: Opens web form to log temperature
+    Features:
+      - Enter any temp 60-80°F
+      - Quick buttons for common temps
+      - Choose Kitchen or Dough temp
+
+TYPICAL BAKE SEQUENCE
+================================================================================
+
+Morning:
+  1. START BAKE    (starter out of freezer)
+  2. LOG TEMP      (kitchen temp)
+
+Midday:
+  3. Fed           (feed starter)
+  4. LOG TEMP      (kitchen temp)
+
+Evening:
+  5. Levain Ready  (levain doubled)
+  6. LOG TEMP      (kitchen temp)
+  7. Mixed         (mix dough)
+  8. LOG TEMP      (dough temp after mixing)
+  9. Fold          (first fold)
+  10. Fold         (second fold)
+  11. Fold         (third fold)
+  12. LOG TEMP     (kitchen temp during bulk)
+  13. Shaped       (shape loaf)
+  14. Fridge In    (cold proof overnight)
+
+Next Day:
+  15. Fridge Out   (warm up slightly)
+  16. Oven In      (start baking)
+  17. Bake Done    (finished!)
+
+HOW TO USE
+================================================================================
+
+Phone Workflow:
+  1. Open camera app
+  2. Point at QR code
+  3. Notification appears
+  4. Tap notification
+  5. Done! (or web form opens for temp)
+
+For Temperature:
+  1. Scan "LOG TEMP" QR code
+  2. Web page opens
+  3. Enter exact temperature (or tap quick button)
+  4. Select "Kitchen" or "Dough"
+  5. Tap "Log Temperature"
+  6. Success! Close browser
+
+TIPS
+================================================================================
+
+✓ Scan START BAKE first thing in the morning
+✓ Log temperatures frequently (every hour during bulk)
+✓ Use exact temps - 73°F vs 76°F makes a difference!
+✓ Keep phone on same WiFi network as server
+✓ Bookmark http://192.168.1.50:8080/temp for quick access
+✓ Check progress anytime: sourdough status
+
+TROUBLESHOOTING
+================================================================================
+
+QR code doesn't work:
+  → Check phone is on WiFi (not cellular)
+  → Test in browser: http://192.168.1.50:8080/health
+
+Temperature page won't load:
+  → Make sure server is running
+  → Check: sudo systemctl status sourdough
+
+Wrong event logged:
+  → Can't undo via QR/web (by design for data integrity)
+  → View data file: cat data/bake_2025-10-07.jsonl
+  → Edit manually if needed (advanced)
+
+ALTERNATIVES
+================================================================================
+
+Don't want to use QR codes? CLI still works:
+
+  sourdough start
+  sourdough log fed
+  sourdough log mixed
+  sourdough temp 76
+  sourdough status
+
+Or direct HTTP:
+  curl -X POST http://192.168.1.50:8080/bake/start
+  curl -X POST http://192.168.1.50:8080/log/temp/76
+
+PRINT INSTRUCTIONS
+================================================================================
+
+1. Download: qrcodes/qrcodes.pdf
+2. Print at 100% scale (do not fit to page)
+3. Use regular paper (color or B&W both work)
+4. Cut out the 11 QR codes
+5. Label them (names are on PDF)
+6. Stick on fridge with tape or magnets
+
+Arrange by frequency:
+  Top row: START BAKE, LOG TEMP, Fold
+  Middle: Mixed, Shaped, Fridge In/Out
+  Bottom: Fed, Levain Ready, Oven In, Bake Done
+
+YOUR GOALS REMINDER
+================================================================================
+
+1. Fix Underproofing
+   → Log temps frequently during bulk fermentation
+   → Track exact timing from Mixed to Shaped
+   → After 3-4 bakes, review correlation
+
+2. Fix Overbrowning
+   → Document in assessment (sourdough complete)
+   → Try different oven positions
+   → Consider foil tent if needed
+
+The system tracks everything - you just scan! 🍞
+================================================================================

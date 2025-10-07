@@ -1,0 +1,116 @@
+================================================================================
+BUGFIX - QR Code "Method Not Allowed" Error
+================================================================================
+
+Date: 2025-10-07
+
+ISSUE
+================================================================================
+
+When scanning the START LOAF QR code (or any event QR code), users received:
+  "Method not allowed"
+
+CAUSE
+================================================================================
+
+QR codes use GET requests when scanned by phone camera, but the server
+endpoints were configured to only accept POST requests.
+
+When you scan a QR code:
+  Phone → Opens URL in browser → GET request
+  But server expected → POST request
+  Result → Error
+
+FIX APPLIED
+================================================================================
+
+1. Updated /bake/start endpoint to accept both GET and POST
+2. Updated /log/* endpoints to accept both GET and POST
+3. Added beautiful confirmation pages for GET requests
+4. POST requests still return JSON (for CLI and automation)
+
+Now when you scan a QR code:
+  Phone → GET request → Success page with ✅
+  CLI → POST request → JSON response
+
+CONFIRMATION PAGES
+================================================================================
+
+When scanning QR codes, you now see nice mobile-friendly pages:
+
+START LOAF (success):
+  ✅
+  Bake Started!
+  Your loaf has been logged
+
+START LOAF (already started):
+  ⚠️
+  Already Started
+  You already started a bake today!
+
+All other events:
+  ✅
+  [event-name]
+  Event logged successfully
+  [timestamp]
+
+TESTING COMPLETED
+================================================================================
+
+✓ START LOAF QR code works
+✓ All event QR codes work (fold, mixed, shaped, etc.)
+✓ Confirmation pages display correctly on mobile
+✓ CLI commands still work with POST
+✓ Data logged correctly to .jsonl files
+
+HOW TO TEST
+================================================================================
+
+1. Scan START LOAF QR code
+   → Should see green success page with ✅
+
+2. Scan any event QR code (fold, mixed, etc.)
+   → Should see green confirmation page
+
+3. Check status:
+   sourdough status
+
+4. Verify data:
+   cat data/bake_2025-10-07.jsonl
+
+TECHNICAL DETAILS
+================================================================================
+
+Changed in: internal/server/handlers.go
+
+Before:
+  if r.Method != http.MethodPost {
+      http.Error(w, "Method not allowed", ...)
+  }
+
+After:
+  if r.Method != http.MethodPost && r.Method != http.MethodGet {
+      http.Error(w, "Method not allowed", ...)
+  }
+
+  // Show nice HTML for GET (QR scans)
+  if r.Method == http.MethodGet {
+      w.Header().Set("Content-Type", "text/html")
+      w.Write([]byte(successHTML))
+      return
+  }
+
+  // Return JSON for POST (CLI)
+  w.Header().Set("Content-Type", "application/json")
+  json.NewEncoder(w).Encode(...)
+
+STATUS
+================================================================================
+
+✅ FIXED - All QR codes now work correctly
+✅ Server rebuilt and restarted
+✅ Testing completed
+✅ Ready to use
+
+You can now scan any QR code and it will work! 🍞
+================================================================================

@@ -1,0 +1,140 @@
+================================================================================
+SOURDOUGH BREAD LOGGER - INSTALLATION COMPLETE ✓
+================================================================================
+
+Installation Date: 2025-10-07
+Server IP: 192.168.1.50:8080
+
+WHAT'S INSTALLED
+================================================================================
+
+✓ Go 1.21.0 installed to /usr/local/go
+✓ Server running as systemd service (sourdough.service)
+✓ CLI tool installed to /usr/local/bin/sourdough
+✓ QR codes generated (PNG + PDF)
+
+SERVER STATUS
+================================================================================
+
+Service: sourdough.service
+Status:  Active (running)
+Port:    8080
+Data:    /home/mdeckert/sourdough/data/
+
+Commands:
+  sudo systemctl status sourdough      # Check status
+  sudo systemctl restart sourdough     # Restart server
+  sudo systemctl stop sourdough        # Stop server
+  sudo systemctl start sourdough       # Start server
+  sudo journalctl -u sourdough -f      # View logs
+
+QR CODES READY
+================================================================================
+
+Location: /home/mdeckert/sourdough/qrcodes/
+
+Files:
+  📄 qrcodes.pdf     - PRINT THIS! Ready-to-print PDF with labeled QR codes
+  🖼️  sheet.png      - Alternative PNG version
+
+Individual codes also available as PNG files.
+
+TO PRINT:
+1. Download qrcodes/qrcodes.pdf to your computer
+2. Print on regular paper
+3. Cut out the QR codes
+4. Stick on fridge with tape or magnets
+
+QUICK START
+================================================================================
+
+From SSH:
+---------
+sourdough start              # Start new bake
+sourdough log mixed          # Log events
+sourdough temp 76            # Log temperature
+sourdough status             # Check timeline
+sourdough complete           # Finish with assessment
+
+From Phone (QR Codes):
+----------------------
+1. Make sure phone is on same network as server (WiFi)
+2. Open camera app
+3. Point at QR code
+4. Tap notification
+5. Done! Event logged.
+
+TEST YOUR SETUP
+================================================================================
+
+1. Test from phone browser:
+   http://192.168.1.50:8080/health
+   Should see: {"status":"ok"}
+
+2. Test a QR code:
+   Scan any QR code → tap notification → check with:
+   sourdough status
+
+3. Test CLI:
+   sourdough start
+   sourdough log fold
+   sourdough status
+
+FIRST BAKE
+================================================================================
+
+A test bake has already been started! Check it:
+  sourdough status
+
+To start fresh tomorrow:
+  sourdough start
+
+TROUBLESHOOTING
+================================================================================
+
+Phone can't scan QR codes:
+  - Ensure phone is on same WiFi network
+  - Test URL in phone browser first
+  - Check server is running: sudo systemctl status sourdough
+
+CLI says "can't connect":
+  - Check server: sudo systemctl status sourdough
+  - Test locally: curl http://localhost:8080/health
+
+Need to regenerate QR codes:
+  ./bin/qrgen http://192.168.1.50:8080
+
+YOUR GOALS
+================================================================================
+
+Problem 1: Underproofing
+  → Focus: Track bulk fermentation time vs temperature
+  → Action: Log temps frequently, especially during bulk
+  → Review: After 3-4 bakes, compare successful vs unsuccessful
+
+Problem 2: Overbrowning in loaf pan
+  → Focus: Document browning level in assessments
+  → Action: Try different oven positions/temps
+  → Review: Correlate settings with browning outcomes
+
+WHAT TO DO NEXT
+================================================================================
+
+1. Print qrcodes/qrcodes.pdf
+2. Cut out QR codes and stick on fridge
+3. Test one QR code with your phone
+4. Start your first real bake tomorrow
+5. Complete assessment after baking
+6. After 3-4 bakes, review patterns with: sourdough history
+
+DOCUMENTATION
+================================================================================
+
+README.md              - Overview
+SETUP.md               - Detailed setup guide
+QUICK_START.md         - Daily workflow reference
+GETTING_STARTED.txt    - Quick reference card
+PROJECT_STRUCTURE.txt  - Code organization
+
+ENJOY BETTER BREAD! 🍞
+================================================================================
