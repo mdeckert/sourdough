@@ -1220,7 +1220,6 @@ const statusViewPageHTML = `<!DOCTYPE html>
                 <div class="controls">
                     <button class="btn" onclick="resetZoom()">Reset Zoom</button>
                     <button class="btn btn-secondary" onclick="zoomToBaking()">Zoom to Baking Phase</button>
-                    <button class="btn btn-secondary" onclick="toggleNotes()">Toggle Notes</button>
                 </div>
                 <div class="chart-container">
                     <canvas id="tempChart"></canvas>
@@ -1237,7 +1236,6 @@ const statusViewPageHTML = `<!DOCTYPE html>
     <script>
         let chart;
         let bakeData;
-        let showNotes = true;
 
         async function loadBake() {
             try {
@@ -1315,7 +1313,6 @@ const statusViewPageHTML = `<!DOCTYPE html>
             const labels = [];
             const kitchenTemps = [];
             const doughTemps = [];
-            const notePoints = [];
             const eventAnnotations = [];
 
             bake.events.forEach((event, idx) => {
@@ -1325,16 +1322,6 @@ const statusViewPageHTML = `<!DOCTYPE html>
                 // Temperature data
                 kitchenTemps.push(event.temp_f || null);
                 doughTemps.push(event.dough_temp_f || null);
-
-                // Note points for clicking
-                if (event.note) {
-                    notePoints.push({
-                        x: time,
-                        y: event.temp_f || event.dough_temp_f || 70,
-                        note: event.note,
-                        event: event.event
-                    });
-                }
 
                 // Event markers
                 if (['oven-in', 'oven-out', 'shaped', 'mixed', 'fridge-in'].includes(event.event)) {
@@ -1376,16 +1363,6 @@ const statusViewPageHTML = `<!DOCTYPE html>
                             backgroundColor: 'rgba(220, 38, 38, 0.1)',
                             tension: 0.4,
                             spanGaps: true
-                        },
-                        {
-                            label: 'Notes',
-                            data: notePoints,
-                            type: 'scatter',
-                            backgroundColor: 'rgb(251, 191, 36)',
-                            pointRadius: 8,
-                            pointHoverRadius: 12,
-                            showLine: false,
-                            hidden: !showNotes
                         }
                     ]
                 },
@@ -1400,9 +1377,10 @@ const statusViewPageHTML = `<!DOCTYPE html>
                         x: {
                             type: 'time',
                             time: {
-                                unit: 'hour',
                                 displayFormats: {
-                                    hour: 'MMM d ha'
+                                    minute: 'h:mm a',
+                                    hour: 'MMM d ha',
+                                    day: 'MMM d'
                                 }
                             },
                             title: {
@@ -1436,26 +1414,7 @@ const statusViewPageHTML = `<!DOCTYPE html>
                             }
                         },
                         tooltip: {
-                            callbacks: {
-                                afterLabel: function(context) {
-                                    if (context.dataset.label === 'Notes' && context.raw.note) {
-                                        return 'Note: ' + context.raw.note;
-                                    }
-                                    return '';
-                                }
-                            }
-                        }
-                    },
-                    onClick: (event, elements) => {
-                        if (elements.length > 0) {
-                            const element = elements[0];
-                            const datasetIndex = element.datasetIndex;
-                            const index = element.index;
-
-                            if (datasetIndex === 2) { // Notes dataset
-                                const point = notePoints[index];
-                                alert('Note: ' + point.note);
-                            }
+                            enabled: true
                         }
                     }
                 }
@@ -1512,13 +1471,6 @@ const statusViewPageHTML = `<!DOCTYPE html>
             }
         }
 
-        function toggleNotes() {
-            showNotes = !showNotes;
-            if (chart) {
-                chart.data.datasets[2].hidden = !showNotes;
-                chart.update();
-            }
-        }
 
         // Load bake on page load
         loadBake();

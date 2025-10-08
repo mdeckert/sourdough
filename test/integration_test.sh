@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-BASE_URL="http://localhost:8080"
+BASE_URL="http://192.168.1.50:8080"
 DATA_DIR="./data"
 BACKUP_DIR=$(mktemp -d)
 TEMP_DIR=$(mktemp -d)
@@ -318,6 +318,75 @@ test_new_bake_after_completion
 test_web_ui_pages
 test_status_endpoint
 test_invalid_requests
+
+# Test 9: View pages with test dataset
+test_view_pages() {
+    log_test "Testing view pages with comprehensive dataset"
+
+    # Test that our comprehensive test bake exists
+    log_test "Verifying test dataset exists (2025-10-05_08-00)"
+    if [ ! -f "$DATA_DIR/bake_2025-10-05_08-00.jsonl" ]; then
+        log_fail "Test dataset file not found"
+        return
+    fi
+
+    # Test API endpoint for specific bake
+    log_test "Testing API endpoint for specific bake"
+    RESPONSE=$(curl -s "$BASE_URL/api/bake/2025-10-05_08-00")
+
+    # Check that response contains expected data
+    if ! echo "$RESPONSE" | grep -q '"event":"oven-in"'; then
+        log_fail "API response missing oven-in event"
+        return
+    fi
+
+    if ! echo "$RESPONSE" | grep -q '"event":"oven-out"'; then
+        log_fail "API response missing oven-out event"
+        return
+    fi
+
+    # Check for temperature data during baking
+    if ! echo "$RESPONSE" | grep -q '"dough_temp_f":208'; then
+        log_fail "API response missing loaf temp readings"
+        return
+    fi
+
+    # Test status view page returns HTML
+    log_test "Testing status view page"
+    STATUS_HTML=$(curl -s "$BASE_URL/view/status?date=2025-10-05_08-00")
+
+    if ! echo "$STATUS_HTML" | grep -q "Bake Status"; then
+        log_fail "Status view page doesn't contain expected title"
+        return
+    fi
+
+    if ! echo "$STATUS_HTML" | grep -q "zoomToBaking"; then
+        log_fail "Status view page missing zoom to baking function"
+        return
+    fi
+
+    # Test history view page
+    log_test "Testing history view page"
+    HISTORY_HTML=$(curl -s "$BASE_URL/view/history")
+
+    if ! echo "$HISTORY_HTML" | grep -q "Bake History"; then
+        log_fail "History view page doesn't contain expected title"
+        return
+    fi
+
+    # Test that bakes list API includes our test bake
+    log_test "Testing bakes list API"
+    BAKES_LIST=$(curl -s "$BASE_URL/api/bakes")
+
+    if ! echo "$BAKES_LIST" | grep -q "2025-10-05_08-00"; then
+        log_fail "Bakes list doesn't include test bake"
+        return
+    fi
+
+    log_pass "View pages and APIs working correctly"
+}
+
+test_view_pages
 
 # Summary
 echo ""

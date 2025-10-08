@@ -3,6 +3,12 @@
 ## Project Overview
 This is a sourdough bread logging system that tracks the entire baking process from starter feeding to final assessment. It uses QR codes for quick event logging via mobile device and provides a web UI for detailed data entry.
 
+**IMPORTANT - Server Access**:
+- Server IP: `192.168.1.50:8080`
+- **Always use the server IP address** (not localhost) in documentation, examples, and commands
+- QR codes must use the server IP to work on mobile devices
+- Localhost/127.0.0.1 are only for local testing on the server itself
+
 ## Architecture
 
 ### Core Components
@@ -37,11 +43,13 @@ sourdough/
 5. `fold` - Fold dough (auto-counts: 1, 2, 3...)
 6. `shaped` - Shape loaf
 7. `fridge-in` - Begin cold proof
-8. `fridge-out` - End cold proof
-9. `oven-in` - Start baking
-10. `bake-complete` - Finish with assessment
-11. `temperature` - Log temp (kitchen or dough)
+8. `oven-in` - Start baking (implies fridge-out)
+9. `oven-out` - End baking, loaf cooling
+10. `loaf-complete` - Finish with assessment
+11. `temperature` - Log temp (kitchen, dough, or oven)
 12. `note` - Add text observation
+
+**Note**: There is no `fridge-out` event - use `oven-in` as it marks the transition from cold proof to baking.
 
 ## Build & Deploy
 
@@ -202,23 +210,23 @@ Stored as part of `loaf-complete` event's `data` field:
 ### Check Current Bake
 ```bash
 ./bin/sourdough status
-curl http://localhost:8080/status | jq
+curl http://192.168.1.50:8080/status
 ```
 
 ### Manual Event Logging (for testing)
 ```bash
 # Start bake
-curl -X POST http://localhost:8080/bake/start
+curl -X POST http://192.168.1.50:8080/loaf/start
 
 # Log temperature
-curl -X POST http://localhost:8080/log/temp/72
-curl -X POST "http://localhost:8080/log/temp/76?type=dough"
+curl -X POST http://192.168.1.50:8080/log/temp/72
+curl -X POST "http://192.168.1.50:8080/log/temp/76?type=dough"
 
 # Log event
-curl -X POST http://localhost:8080/log/fold
+curl -X POST http://192.168.1.50:8080/log/fold
 
 # Log note
-curl -X POST http://localhost:8080/log/note \
+curl -X POST http://192.168.1.50:8080/log/note \
   -H "Content-Type: application/json" \
   -d '{"note":"Good oven spring"}'
 ```
@@ -260,7 +268,7 @@ sudo systemctl restart sourdough
 ### Tests Failing
 ```bash
 # Check if server is running (for integration tests)
-curl http://localhost:8080/health
+curl http://192.168.1.50:8080/health
 
 # Clean and rebuild
 make clean
@@ -268,19 +276,19 @@ make build
 make test
 
 # Check for active bake (can cause duplicate start errors)
-curl http://localhost:8080/status
+curl http://192.168.1.50:8080/status
 ```
 
 ### QR Codes Not Working
 ```bash
 # Regenerate QR codes
-./bin/qrgen http://YOUR_SERVER_IP:8080
+./bin/qrgen http://192.168.1.50:8080
 
 # Verify PDF exists
 ls -la qrcodes/qrcodes.pdf
 
 # Test PDF endpoint
-curl -I http://localhost:8080/qrcodes.pdf
+curl -I http://192.168.1.50:8080/qrcodes.pdf
 ```
 
 ## Development Workflow
@@ -297,7 +305,7 @@ curl -I http://localhost:8080/qrcodes.pdf
 1. Edit template in `internal/server/templates.go` (inline HTML/CSS/JS)
 2. Run `make server` to rebuild
 3. Run `sudo systemctl restart sourdough` to deploy
-4. Test in browser at http://localhost:8080/{page}
+4. Test in browser at http://192.168.1.50:8080/{page}
 5. Verify with integration tests: `make test-integration`
 
 ### Storage Changes
@@ -360,13 +368,13 @@ make test-all
 
 # Check Status
 sudo systemctl status sourdough
-curl http://localhost:8080/health
+curl http://192.168.1.50:8080/health
 
 # View Logs
 journalctl -u sourdough -f
 
 # Generate QR Codes
-./bin/qrgen http://192.168.1.100:8080
+./bin/qrgen http://192.168.1.50:8080
 ```
 
 ---
