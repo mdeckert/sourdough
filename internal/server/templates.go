@@ -720,9 +720,9 @@ const tempPageHTML = `<!DOCTYPE html>
             manualInput.value = ''; // Clear manual input when slider moves
         };
 
-        // Sync manual input to slider
+        // Sync manual input to slider (only if within slider range)
         manualInput.oninput = function() {
-            if (this.value) {
+            if (this.value >= 60 && this.value <= 80) {
                 slider.value = this.value;
                 sliderValue.textContent = this.value + '°F';
             }
@@ -731,8 +731,9 @@ const tempPageHTML = `<!DOCTYPE html>
         async function submitTemp(tempType) {
             let temp = manualInput.value || slider.value;
 
-            if (!temp || temp < 60 || temp > 80) {
-                showError('Temperature must be between 60°F and 80°F');
+            // Validate temperature is reasonable (0-600°F covers all use cases)
+            if (!temp || temp < 0 || temp > 600) {
+                showError('Temperature must be between 0°F and 600°F');
                 return;
             }
 
@@ -1029,7 +1030,7 @@ const historyViewPageHTML = `<!DOCTYPE html>
             bakes.forEach(bake => {
                 const card = document.createElement('div');
                 card.className = 'bake-card';
-                card.onclick = () => window.location.href = '/view/status'; // Could be enhanced to show specific bake
+                card.onclick = () => window.location.href = '/view/status?date=' + encodeURIComponent(bake.date);
 
                 let html = '<div class="bake-date">' + bake.date + '</div>';
                 html += '<div class="bake-title">' + bake.start_time + '</div>';
@@ -1120,6 +1121,7 @@ const statusViewPageHTML = `<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bake Status</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
     <style>
@@ -1239,7 +1241,12 @@ const statusViewPageHTML = `<!DOCTYPE html>
 
         async function loadBake() {
             try {
-                const response = await fetch('/api/bake/current');
+                // Check if a date parameter is provided in the URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const date = urlParams.get('date');
+                const apiUrl = date ? '/api/bake/' + date : '/api/bake/current';
+
+                const response = await fetch(apiUrl);
                 bakeData = await response.json();
 
                 if (!bakeData.events || bakeData.events.length === 0) {
