@@ -1414,13 +1414,17 @@ const statusViewPageHTML = `<!DOCTYPE html>
             <div class="loading" id="loading">Loading bake data...</div>
             <div id="bake-content" style="display: none;">
                 <div class="stats" id="stats"></div>
-                <div class="controls">
-                    <button class="btn" onclick="resetZoom()">Reset Zoom</button>
-                    <button class="btn btn-secondary" onclick="zoomToBaking()">Zoom to Baking Phase</button>
-                </div>
+
+                <h3 style="margin-top: 20px; margin-bottom: 10px;">Fermentation Temperatures</h3>
                 <div class="chart-container">
-                    <canvas id="tempChart"></canvas>
+                    <canvas id="fermentChart"></canvas>
                 </div>
+
+                <h3 style="margin-top: 30px; margin-bottom: 10px;">Baking Temperatures</h3>
+                <div class="chart-container">
+                    <canvas id="bakeChart"></canvas>
+                </div>
+
                 <div class="timeline" id="timeline"></div>
                 <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #e5e7eb; text-align: center;">
                     <button class="btn" style="background: #dc2626; border-color: #dc2626;" onclick="deleteBake()">🗑️ Delete This Bake</button>
@@ -1441,7 +1445,8 @@ const statusViewPageHTML = `<!DOCTYPE html>
     </div>
 
     <script>
-        let chart;
+        let fermentChart;
+        let bakeChart;
         let bakeData;
 
         async function loadBake() {
@@ -1514,7 +1519,8 @@ const statusViewPageHTML = `<!DOCTYPE html>
         }
 
         function displayChart(bake) {
-            const ctx = document.getElementById('tempChart');
+            const fermentCtx = document.getElementById('fermentChart');
+            const bakeCtx = document.getElementById('bakeChart');
 
             // Find oven-in event to split kitchen vs oven temps, dough vs loaf temps
             const ovenInIdx = bake.events.findIndex(e => e.event === 'oven-in');
@@ -1591,16 +1597,60 @@ const statusViewPageHTML = `<!DOCTYPE html>
                 }
             });
 
-            if (chart) chart.destroy();
+            if (fermentChart) fermentChart.destroy();
+            if (bakeChart) bakeChart.destroy();
 
-            chart = new Chart(ctx, {
+            // Fermentation Chart (Kitchen + Dough temps before oven-in)
+            const fermentLabels = [];
+            const fermentKitchen = [];
+            const fermentDough = [];
+            const fermentNotes = [];
+
+            // Baking Chart (Oven + Loaf temps from oven-in onwards)
+            const bakeLabels = [];
+            const bakeOven = [];
+            const bakeLoaf = [];
+            const bakeNotes = [];
+
+            bake.events.forEach((event, idx) => {
+                const time = new Date(event.timestamp);
+
+                if (ovenInIdx < 0 || idx < ovenInIdx) {
+                    // Before oven-in: fermentation phase
+                    fermentLabels.push(time);
+                    fermentKitchen.push(event.temp_f || null);
+                    fermentDough.push(event.dough_temp_f || null);
+                    if (event.note) {
+                        fermentNotes.push({
+                            x: time,
+                            y: 55,
+                            note: event.note
+                        });
+                    }
+                } else {
+                    // From oven-in onwards: baking phase
+                    bakeLabels.push(time);
+                    bakeOven.push(event.temp_f || null);
+                    bakeLoaf.push(event.dough_temp_f || null);
+                    if (event.note) {
+                        bakeNotes.push({
+                            x: time,
+                            y: 55,
+                            note: event.note
+                        });
+                    }
+                }
+            });
+
+            // Create Fermentation Chart
+            fermentChart = new Chart(fermentCtx, {
                 type: 'line',
                 data: {
-                    labels: labels,
+                    labels: fermentLabels,
                     datasets: [
                         {
                             label: 'Kitchen Temp (°F)',
-                            data: kitchenTemps,
+                            data: fermentKitchen,
                             borderColor: 'rgb(59, 130, 246)',
                             backgroundColor: 'rgba(59, 130, 246, 0.1)',
                             tension: 0.4,
@@ -1608,31 +1658,15 @@ const statusViewPageHTML = `<!DOCTYPE html>
                         },
                         {
                             label: 'Dough Temp (°F)',
-                            data: doughTemps,
+                            data: fermentDough,
                             borderColor: 'rgb(220, 38, 38)',
                             backgroundColor: 'rgba(220, 38, 38, 0.1)',
                             tension: 0.4,
                             spanGaps: true
                         },
                         {
-                            label: 'Loaf Internal Temp (°F)',
-                            data: loafTemps,
-                            borderColor: 'rgb(147, 51, 234)',
-                            backgroundColor: 'rgba(147, 51, 234, 0.1)',
-                            tension: 0.4,
-                            spanGaps: true
-                        },
-                        {
-                            label: 'Oven Temp (°F)',
-                            data: ovenTemps,
-                            borderColor: 'rgb(249, 115, 22)',
-                            backgroundColor: 'rgba(249, 115, 22, 0.1)',
-                            tension: 0.4,
-                            spanGaps: true
-                        },
-                        {
                             label: 'Notes',
-                            data: notePoints,
+                            data: fermentNotes,
                             type: 'scatter',
                             backgroundColor: 'rgb(251, 191, 36)',
                             pointRadius: 6,
@@ -1644,54 +1678,84 @@ const statusViewPageHTML = `<!DOCTYPE html>
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    interaction: {
-                        mode: 'index',
-                        intersect: false
-                    },
+                    interaction: { mode: 'index', intersect: false },
                     scales: {
                         x: {
                             type: 'time',
-                            time: {
-                                displayFormats: {
-                                    minute: 'h:mm a',
-                                    hour: 'MMM d ha',
-                                    day: 'MMM d'
-                                }
-                            },
-                            title: {
-                                display: true,
-                                text: 'Time'
-                            }
+                            time: { displayFormats: { minute: 'h:mm a', hour: 'MMM d ha', day: 'MMM d' } },
+                            title: { display: true, text: 'Time' }
                         },
                         y: {
-                            title: {
-                                display: true,
-                                text: 'Temperature (°F)'
-                            },
-                            min: 60,
-                            max: 500
+                            title: { display: true, text: 'Temperature (°F)' },
+                            min: 50,
+                            max: 85
                         }
                     },
                     plugins: {
-                        zoom: {
-                            limits: {
-                                x: {min: 'original', max: 'original'},
-                                y: {min: 'original', max: 'original'}
-                            },
-                            zoom: {
-                                wheel: {
-                                    enabled: true,
-                                },
-                                pinch: {
-                                    enabled: true
-                                },
-                                mode: 'x',
-                            },
-                            pan: {
-                                enabled: true,
-                                mode: 'x',
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    if (context.dataset.label === 'Notes' && context.raw.note) {
+                                        return context.raw.note;
+                                    }
+                                    return '';
+                                }
                             }
+                        }
+                    }
+                }
+            });
+
+            // Create Baking Chart
+            bakeChart = new Chart(bakeCtx, {
+                type: 'line',
+                data: {
+                    labels: bakeLabels,
+                    datasets: [
+                        {
+                            label: 'Oven Temp (°F)',
+                            data: bakeOven,
+                            borderColor: 'rgb(249, 115, 22)',
+                            backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                            tension: 0.4,
+                            spanGaps: true
                         },
+                        {
+                            label: 'Loaf Internal Temp (°F)',
+                            data: bakeLoaf,
+                            borderColor: 'rgb(147, 51, 234)',
+                            backgroundColor: 'rgba(147, 51, 234, 0.1)',
+                            tension: 0.4,
+                            spanGaps: true
+                        },
+                        {
+                            label: 'Notes',
+                            data: bakeNotes,
+                            type: 'scatter',
+                            backgroundColor: 'rgb(251, 191, 36)',
+                            pointRadius: 6,
+                            pointHoverRadius: 8,
+                            showLine: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: { displayFormats: { minute: 'h:mm a', hour: 'MMM d ha', day: 'MMM d' } },
+                            title: { display: true, text: 'Time' }
+                        },
+                        y: {
+                            title: { display: true, text: 'Temperature (°F)' },
+                            min: 50,
+                            max: 550
+                        }
+                    },
+                    plugins: {
                         tooltip: {
                             callbacks: {
                                 afterLabel: function(context) {
