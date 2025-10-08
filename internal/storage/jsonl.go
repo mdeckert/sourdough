@@ -75,12 +75,12 @@ func (s *Storage) getCurrentBakeFile() string {
 		}
 	}
 
-	// No active bake found, create new one with current timestamp
-	date := time.Now().Format("2006-01-02_15-04")
+	// No active bake found, create new one with current timestamp (including seconds to prevent collisions)
+	date := time.Now().Format("2006-01-02_15-04-05")
 	return filepath.Join(s.dataDir, fmt.Sprintf("bake_%s.jsonl", date))
 }
 
-// isCompleted checks if a bake file has a loaf-complete event
+// isCompleted checks if a bake file ENDS with a loaf-complete event (no events after)
 func (s *Storage) isCompleted(filePath string) bool {
 	f, err := os.Open(filePath)
 	if err != nil {
@@ -88,17 +88,23 @@ func (s *Storage) isCompleted(filePath string) bool {
 	}
 	defer f.Close()
 
+	var events []models.Event
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		var event models.Event
 		if err := json.Unmarshal(scanner.Bytes(), &event); err != nil {
 			continue
 		}
-		if event.Event == models.EventLoafComplete {
-			return true
-		}
+		events = append(events, event)
 	}
-	return false
+
+	// File is completed only if it ends with loaf-complete (no events after)
+	if len(events) == 0 {
+		return false
+	}
+
+	lastEvent := events[len(events)-1]
+	return lastEvent.Event == models.EventLoafComplete
 }
 
 // getBakeFile returns the path to a specific bake file by date
@@ -165,6 +171,39 @@ func (s *Storage) ReadCurrentBake() (*models.Bake, error) {
 		return nil, fmt.Errorf("error reading bake file: %w", err)
 	}
 
+	// Find the last loaf-complete event index
+	// If there are events after it, return only those (new bake started in same file)
+	lastCompleteIdx := -1
+	for i, event := range events {
+		if event.Event == models.EventLoafComplete {
+			lastCompleteIdx = i
+		}
+	}
+
+	// If there's a loaf-complete and events after it, return only events after completion
+	if lastCompleteIdx >= 0 && lastCompleteIdx < len(events)-1 {
+		events = events[lastCompleteIdx+1:]
+	} else if lastCompleteIdx >= 0 && lastCompleteIdx == len(events)-1 {
+		// File ends with loaf-complete, extract assessment but return empty events
+		var assessment *models.Assessment
+		lastEvent := events[len(events)-1]
+		if lastEvent.Data != nil {
+			if assessmentData, ok := lastEvent.Data["assessment"]; ok {
+				assessmentJSON, _ := json.Marshal(assessmentData)
+				var a models.Assessment
+				if json.Unmarshal(assessmentJSON, &a) == nil {
+					assessment = &a
+				}
+			}
+		}
+
+		return &models.Bake{
+			Date:       time.Now().Format("2006-01-02"),
+			Events:     []models.Event{},
+			Assessment: assessment,
+		}, nil
+	}
+
 	// Extract date from first event or use today
 	date := time.Now().Format("2006-01-02")
 	if len(events) > 0 {
@@ -174,20 +213,6 @@ func (s *Storage) ReadCurrentBake() (*models.Bake, error) {
 	bake := &models.Bake{
 		Date:   date,
 		Events: events,
-	}
-
-	// Check if last event is loaf-complete with assessment
-	if len(events) > 0 {
-		lastEvent := events[len(events)-1]
-		if lastEvent.Event == models.EventLoafComplete && lastEvent.Data != nil {
-			if assessmentData, ok := lastEvent.Data["assessment"]; ok {
-				assessmentJSON, _ := json.Marshal(assessmentData)
-				var assessment models.Assessment
-				if json.Unmarshal(assessmentJSON, &assessment) == nil {
-					bake.Assessment = &assessment
-				}
-			}
-		}
 	}
 
 	return bake, nil
