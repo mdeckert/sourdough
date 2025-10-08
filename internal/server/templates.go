@@ -24,12 +24,172 @@ const navDropdownHTML = `
             <option value="/notes">📝 Add Note</option>
         </optgroup>
         <optgroup label="View">
+            <option value="/ingredients">📋 Ingredients Reference</option>
             <option value="/view/status">📊 View Status</option>
             <option value="/view/history">📚 View History</option>
             <option value="/qrcodes.pdf">📱 Get QR Codes</option>
         </optgroup>
     </select>
 </div>
+`
+
+const ingredientsPageHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ingredients Reference</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        h1 { color: #333; margin-bottom: 8px; font-size: 26px; text-align: center; }
+        .subtitle { color: #666; text-align: center; margin-bottom: 25px; font-size: 14px; }
+        .stage {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #84fab0;
+        }
+        .stage-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .stage-number {
+            background: #84fab0;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .ingredient-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .ingredient-row:last-child { border-bottom: none; }
+        .ingredient-name {
+            color: #555;
+            font-size: 15px;
+        }
+        .ingredient-amount {
+            color: #333;
+            font-weight: 600;
+            font-size: 15px;
+        }
+        .note {
+            margin-top: 15px;
+            padding: 12px;
+            background: #fff3cd;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📋 Ingredients Reference</h1>
+        <p class="subtitle">Feeding Stages</p>
+
+        <div class="stage">
+            <div class="stage-title">
+                <span class="stage-number">1</span>
+                <span>Fed (Create Levain)</span>
+            </div>
+            <div class="ingredient-row">
+                <span class="ingredient-name">Water</span>
+                <span class="ingredient-amount">135g (~5oz)</span>
+            </div>
+            <div class="ingredient-row">
+                <span class="ingredient-name">Rye/Spelt Mix</span>
+                <span class="ingredient-amount">40g</span>
+            </div>
+            <div class="ingredient-row">
+                <span class="ingredient-name">Bread Flour</span>
+                <span class="ingredient-amount">75g</span>
+            </div>
+            <div class="ingredient-row">
+                <span class="ingredient-name">Starter</span>
+                <span class="ingredient-amount">266g</span>
+            </div>
+        </div>
+
+        <div class="stage">
+            <div class="stage-title">
+                <span class="stage-number">2</span>
+                <span>Levain Ready</span>
+            </div>
+            <div class="ingredient-row">
+                <span class="ingredient-name">Water</span>
+                <span class="ingredient-amount">120g (~4oz)</span>
+            </div>
+            <div class="ingredient-row">
+                <span class="ingredient-name">Bread Flour</span>
+                <span class="ingredient-amount">90g</span>
+            </div>
+            <div class="ingredient-row">
+                <span class="ingredient-name">Levain</span>
+                <span class="ingredient-amount">57g</span>
+            </div>
+            <div class="note">⚠️ This portion goes back in the freezer</div>
+        </div>
+
+        <div class="stage">
+            <div class="stage-title">
+                <span class="stage-number">3</span>
+                <span>Mixed (Final Loaf)</span>
+            </div>
+            <div class="ingredient-row">
+                <span class="ingredient-name">Water</span>
+                <span class="ingredient-amount">400g</span>
+            </div>
+            <div class="ingredient-row">
+                <span class="ingredient-name">Rye/Spelt Mix</span>
+                <span class="ingredient-amount">400g</span>
+            </div>
+            <div class="ingredient-row">
+                <span class="ingredient-name">Bread Flour</span>
+                <span class="ingredient-amount">400g</span>
+            </div>
+            <div class="ingredient-row">
+                <span class="ingredient-name">Levain</span>
+                <span class="ingredient-amount">466g</span>
+            </div>
+            <div class="ingredient-row">
+                <span class="ingredient-name">Salt</span>
+                <span class="ingredient-amount">20g</span>
+            </div>
+        </div>
+
+        ` + navDropdownHTML + `
+    </div>
+</body>
+</html>
 `
 
 const completePageHTML = `<!DOCTYPE html>

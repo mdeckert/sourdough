@@ -51,6 +51,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/temp", s.handleTempPage)
 	mux.HandleFunc("/notes", s.handleNotesPage)
 	mux.HandleFunc("/complete", s.handleCompletePage)
+	mux.HandleFunc("/ingredients", s.handleIngredientsPage)
 	mux.HandleFunc("/qrcodes.pdf", s.handleQRCodePDF)
 	mux.HandleFunc("/images/", s.handleImage)
 
@@ -484,6 +485,12 @@ func (s *Server) handleNotesPage(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleCompletePage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	w.Write([]byte(completePageHTML))
+}
+
+// handleIngredientsPage serves the ingredients reference page
+func (s *Server) handleIngredientsPage(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(ingredientsPageHTML))
 }
 
 // handleOvenInPage serves the oven-in temperature selection web UI
