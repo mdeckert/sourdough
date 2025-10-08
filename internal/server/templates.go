@@ -554,8 +554,8 @@ const notesPageHTML = `<!DOCTYPE html>
         async function addNote() {
             const note = document.getElementById('note').value.trim();
 
-            if (!note) {
-                showError('Please enter a note');
+            if (!note && !selectedImage) {
+                showError('Please enter a note or attach an image');
                 return;
             }
 

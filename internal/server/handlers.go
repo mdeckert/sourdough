@@ -259,10 +259,6 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 			}
 
 			noteText = r.FormValue("note")
-			if noteText == "" {
-				http.Error(w, "Note cannot be empty", http.StatusBadRequest)
-				return
-			}
 
 			// Handle image upload if present
 			file, header, err := r.FormFile("image")
@@ -281,6 +277,12 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, fmt.Sprintf("Failed to save image: %v", err), http.StatusInternalServerError)
 					return
 				}
+			}
+
+			// Require either note text or image
+			if noteText == "" && imageFilename == "" {
+				http.Error(w, "Note text or image required", http.StatusBadRequest)
+				return
 			}
 		} else {
 			// JSON body (backward compatibility)
