@@ -64,7 +64,8 @@ type Assessment struct {
 
 // Bake represents a complete baking session
 type Bake struct {
-	Date       string       `json:"date"`
+	Date       string       `json:"date"`          // Date portion only (e.g., "2025-10-07")
+	Filename   string       `json:"filename"`      // Full filename without extension (e.g., "bake_2025-10-07_19-13-49")
 	Events     []Event      `json:"events"`
 	Assessment *Assessment  `json:"assessment,omitempty"`
 }

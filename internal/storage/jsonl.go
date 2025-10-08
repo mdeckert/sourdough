@@ -211,9 +211,13 @@ func (s *Storage) ReadCurrentBake() (*models.Bake, error) {
 		date = events[0].Timestamp.Format("2006-01-02")
 	}
 
+	// Extract filename without extension
+	filename := strings.TrimSuffix(filepath.Base(filePath), ".jsonl")
+
 	bake := &models.Bake{
-		Date:   date,
-		Events: events,
+		Date:     date,
+		Filename: filename,
+		Events:   events,
 	}
 
 	return bake, nil
@@ -256,9 +260,13 @@ func (s *Storage) ReadBake(date string) (*models.Bake, error) {
 		return nil, fmt.Errorf("error reading bake file: %w", err)
 	}
 
+	// Extract filename without extension
+	filename := strings.TrimSuffix(filepath.Base(filePath), ".jsonl")
+
 	bake := &models.Bake{
-		Date:   date,
-		Events: events,
+		Date:     date,
+		Filename: filename,
+		Events:   events,
 	}
 
 	// Check if last event is an assessment (loaf-complete with assessment data)

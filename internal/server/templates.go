@@ -1732,7 +1732,7 @@ const statusViewPageHTML = `<!DOCTYPE html>
 
                 // Display image thumbnail if present
                 if (event.image) {
-                    const imageUrl = '/images/' + bake.date + '/' + event.image;
+                    const imageUrl = '/images/' + bake.filename + '/' + event.image;
                     html += '<div class="event-image" onclick="openModal(\'' + imageUrl + '\')">';
                     html += '<img src="' + imageUrl + '" alt="Event photo" title="Click to enlarge">';
                     html += '</div>';
