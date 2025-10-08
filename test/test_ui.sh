@@ -89,7 +89,7 @@ else
     exit 1
 fi
 
-# Test 9: Check for datasets (Kitchen, Dough, Oven, Notes)
+# Test 9: Check for datasets (Kitchen, Dough, Loaf, Oven, Notes)
 if echo "$HTML" | grep -q "label: 'Kitchen Temp"; then
     echo -e "${GREEN}✓ PASS: Kitchen temperature dataset found${NC}"
 else
@@ -97,10 +97,17 @@ else
     exit 1
 fi
 
-if echo "$HTML" | grep -q "label: 'Dough/Loaf Temp"; then
-    echo -e "${GREEN}✓ PASS: Dough/Loaf temperature dataset found${NC}"
+if echo "$HTML" | grep -q "label: 'Dough Temp"; then
+    echo -e "${GREEN}✓ PASS: Dough temperature dataset found${NC}"
 else
-    echo -e "${RED}✗ FAIL: Dough/Loaf temperature dataset not found${NC}"
+    echo -e "${RED}✗ FAIL: Dough temperature dataset not found${NC}"
+    exit 1
+fi
+
+if echo "$HTML" | grep -q "label: 'Loaf Internal Temp"; then
+    echo -e "${GREEN}✓ PASS: Loaf internal temperature dataset found${NC}"
+else
+    echo -e "${RED}✗ FAIL: Loaf internal temperature dataset not found${NC}"
     exit 1
 fi
 
@@ -131,7 +138,13 @@ echo -e "${GREEN}All UI element tests passed! ✓${NC}"
 echo ""
 echo "To manually test:"
 echo "  1. Open: ${BASE_URL}/view/status?date=${TEST_DATE}"
-echo "  2. Verify chart displays Kitchen, Dough/Loaf, Oven temps, and Notes"
-echo "  3. Click 'Zoom to Baking Phase' - should zoom X and Y axes"
-echo "  4. Click 'Reset Zoom' - should restore original view"
+echo "  2. Verify chart displays 5 datasets:"
+echo "     - Kitchen Temp (blue, before oven-in)"
+echo "     - Dough Temp (red, before oven-in)"
+echo "     - Loaf Internal Temp (purple, during baking)"
+echo "     - Oven Temp (orange, during baking)"
+echo "     - Notes (yellow markers)"
+echo "  3. Click 'Zoom to Baking Phase' - should show ~10:30-11:10, Y-axis ~160-520°F"
+echo "  4. Click 'Reset Zoom' - should restore full view (60-500°F)"
 echo "  5. Hover over yellow note markers - should show note text in tooltip"
+echo "  6. No long line connecting dough (70-76°F) to loaf temps (180-208°F)"

@@ -1313,13 +1313,14 @@ const statusViewPageHTML = `<!DOCTYPE html>
         function displayChart(bake) {
             const ctx = document.getElementById('tempChart');
 
-            // Find oven-in event to split kitchen vs oven temps
+            // Find oven-in event to split kitchen vs oven temps, dough vs loaf temps
             const ovenInIdx = bake.events.findIndex(e => e.event === 'oven-in');
 
             // Prepare data points
             const labels = [];
             const kitchenTemps = [];
             const doughTemps = [];
+            const loafTemps = [];
             const ovenTemps = [];
             const notePoints = [];
             const eventAnnotations = [];
@@ -1344,7 +1345,21 @@ const statusViewPageHTML = `<!DOCTYPE html>
                     ovenTemps.push(null);
                 }
 
-                doughTemps.push(event.dough_temp_f || null);
+                // Separate dough temps (before oven) from loaf temps (during baking)
+                if (event.dough_temp_f) {
+                    if (ovenInIdx >= 0 && idx >= ovenInIdx) {
+                        // After oven-in, dough_temp_f is loaf internal temp
+                        loafTemps.push(event.dough_temp_f);
+                        doughTemps.push(null);
+                    } else {
+                        // Before oven-in, dough_temp_f is dough temp
+                        doughTemps.push(event.dough_temp_f);
+                        loafTemps.push(null);
+                    }
+                } else {
+                    doughTemps.push(null);
+                    loafTemps.push(null);
+                }
 
                 // Note markers
                 if (event.note) {
@@ -1389,10 +1404,18 @@ const statusViewPageHTML = `<!DOCTYPE html>
                             spanGaps: true
                         },
                         {
-                            label: 'Dough/Loaf Temp (°F)',
+                            label: 'Dough Temp (°F)',
                             data: doughTemps,
                             borderColor: 'rgb(220, 38, 38)',
                             backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                            tension: 0.4,
+                            spanGaps: true
+                        },
+                        {
+                            label: 'Loaf Internal Temp (°F)',
+                            data: loafTemps,
+                            borderColor: 'rgb(147, 51, 234)',
+                            backgroundColor: 'rgba(147, 51, 234, 0.1)',
                             tension: 0.4,
                             spanGaps: true
                         },
@@ -1511,7 +1534,13 @@ const statusViewPageHTML = `<!DOCTYPE html>
         }
 
         function resetZoom() {
-            if (chart) chart.resetZoom();
+            if (chart) {
+                chart.resetZoom();
+                // Restore original Y-axis settings
+                chart.options.scales.y.min = 60;
+                chart.options.scales.y.max = 500;
+                chart.update();
+            }
         }
 
         function zoomToBaking() {
@@ -1536,13 +1565,20 @@ const statusViewPageHTML = `<!DOCTYPE html>
                     if (e.dough_temp_f) temps.push(e.dough_temp_f);
                 });
 
-                // Calculate Y-axis range with some padding
+                if (temps.length === 0) return;
+
+                // Calculate Y-axis range with padding
                 let minTemp = Math.min(...temps);
                 let maxTemp = Math.max(...temps);
-                const padding = (maxTemp - minTemp) * 0.1 || 50;
-                minTemp = Math.max(0, Math.floor(minTemp - padding));
+
+                // Add 10% padding or at least 20 degrees
+                const range = maxTemp - minTemp;
+                const padding = Math.max(range * 0.1, 20);
+
+                minTemp = Math.floor(minTemp - padding);
                 maxTemp = Math.ceil(maxTemp + padding);
 
+                // Zoom both axes
                 chart.zoomScale('x', {min: start, max: end}, 'default');
                 chart.options.scales.y.min = minTemp;
                 chart.options.scales.y.max = maxTemp;
