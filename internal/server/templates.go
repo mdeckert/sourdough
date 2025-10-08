@@ -703,8 +703,12 @@ const tempPageHTML = `<!DOCTYPE html>
                 <label for="dough" onclick="submitTemp('dough')">Dough</label>
             </div>
             <div class="radio-option">
-                <input type="radio" id="kitchen" name="tempType" value="kitchen">
-                <label for="kitchen" onclick="submitTemp('kitchen')">Kitchen</label>
+                <input type="radio" id="oven" name="tempType" value="oven">
+                <label for="oven" onclick="submitTemp('oven')">Oven</label>
+            </div>
+            <div class="radio-option">
+                <input type="radio" id="loaf" name="tempType" value="loaf">
+                <label for="loaf" onclick="submitTemp('loaf')">Loaf</label>
             </div>
         </div>
     </div>
@@ -738,7 +742,16 @@ const tempPageHTML = `<!DOCTYPE html>
             }
 
             try {
-                const url = '/log/temp/' + temp + (tempType === 'dough' ? '?type=dough' : '');
+                // Map tempType to query parameter
+                let typeParam = '';
+                if (tempType === 'dough' || tempType === 'loaf') {
+                    typeParam = '?type=dough';  // Both use dough_temp_f field
+                } else if (tempType === 'oven') {
+                    typeParam = '?type=oven';
+                }
+                // No param for kitchen (auto-logged via Ecobee anyway)
+
+                const url = '/log/temp/' + temp + typeParam;
                 const response = await fetch(url, { method: 'POST' });
 
                 if (response.ok) {

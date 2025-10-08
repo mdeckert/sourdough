@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/mdeckert/sourdough/internal/ecobee"
 	"github.com/mdeckert/sourdough/internal/models"
@@ -50,12 +51,62 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/complete", s.handleCompletePage)
 	mux.HandleFunc("/qrcodes.pdf", s.handleQRCodePDF)
 
+	// Start automatic temperature logging if Ecobee is enabled
+	if s.ecobee.IsEnabled() {
+		go s.autoLogTemperature()
+	}
+
 	// Wrap mux with logging middleware
 	handler := s.loggingMiddleware(mux)
 
 	addr := fmt.Sprintf(":%s", s.port)
 	log.Printf("Starting server on %s", addr)
 	return http.ListenAndServe(addr, handler)
+}
+
+// autoLogTemperature logs kitchen temperature every 4 hours if there's an active bake
+func (s *Server) autoLogTemperature() {
+	ticker := time.NewTicker(4 * time.Hour)
+	defer ticker.Stop()
+
+	log.Printf("Automatic temperature logging enabled (every 4 hours)")
+
+	for range ticker.C {
+		// Check if there's an active bake
+		hasBake, err := s.storage.HasCurrentBake()
+		if err != nil {
+			log.Printf("Warning: Failed to check for active bake: %v", err)
+			continue
+		}
+
+		if !hasBake {
+			// No active bake, skip logging
+			continue
+		}
+
+		// Fetch temperature from Ecobee
+		temp, err := s.ecobee.GetTemperature()
+		if err != nil {
+			log.Printf("Warning: Failed to auto-log temperature: %v", err)
+			continue
+		}
+
+		if temp <= 0 {
+			log.Printf("Warning: Invalid temperature from Ecobee: %.1f", temp)
+			continue
+		}
+
+		// Create temperature event
+		event := models.NewEvent(models.EventTemperature).WithTemp(temp)
+
+		// Save event
+		if err := s.storage.AppendEvent(event); err != nil {
+			log.Printf("Error: Failed to save auto-logged temperature: %v", err)
+			continue
+		}
+
+		log.Printf("Auto-logged kitchen temperature: %.1f°F", temp)
+	}
 }
 
 // loggingMiddleware logs all requests
@@ -189,10 +240,16 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 
 		event = models.NewEvent(models.EventTemperature)
 
-		// Check if this is dough temp or kitchen temp
-		if r.URL.Query().Get("type") == "dough" {
+		// Check temperature type: dough/loaf, oven, or kitchen
+		tempType := r.URL.Query().Get("type")
+		if tempType == "dough" {
+			// Dough or loaf internal temp (both use dough_temp_f)
 			event.WithDoughTemp(temp)
+		} else if tempType == "oven" {
+			// Oven temperature (use kitchen temp_f field for now)
+			event.WithTemp(temp)
 		} else {
+			// Kitchen temp (manual, since auto-logged via Ecobee)
 			event.WithTemp(temp)
 		}
 	} else {
