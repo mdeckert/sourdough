@@ -166,7 +166,7 @@ const ingredientsPageHTML = `<!DOCTYPE html>
             </div>
             <div class="ingredient-row">
                 <span class="ingredient-name">Water</span>
-                <span class="ingredient-amount">400g</span>
+                <span class="ingredient-amount">400g (~14oz)</span>
             </div>
             <div class="ingredient-row">
                 <span class="ingredient-name">Rye/Spelt Mix</span>

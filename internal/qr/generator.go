@@ -205,7 +205,7 @@ func generatePDF(events []EventQR, qrDir, outputPath string) error {
 
 	// Loaf: Mixed
 	pdf.CellFormat(35, 5, "3. Mixed (Loaf)", "1", 0, "L", false, 0, "")
-	pdf.CellFormat(25, 5, "400g", "1", 0, "R", false, 0, "")
+	pdf.CellFormat(25, 5, "400g (~14oz)", "1", 0, "R", false, 0, "")
 	pdf.CellFormat(30, 5, "400g", "1", 0, "R", false, 0, "")
 	pdf.CellFormat(30, 5, "400g", "1", 0, "R", false, 0, "")
 	pdf.CellFormat(35, 5, "466g levain", "1", 0, "R", false, 0, "")
