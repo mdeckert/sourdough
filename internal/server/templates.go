@@ -1,5 +1,37 @@
 package server
 
+// navDropdownHTML is the navigation dropdown added to all UI pages
+const navDropdownHTML = `
+<div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e0e0e0;">
+    <label style="display: block; color: #666; margin-bottom: 10px; font-weight: 500; font-size: 14px; text-align: center;">Quick Navigation</label>
+    <select onchange="if(this.value) window.location.href=this.value" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 16px; background: white; cursor: pointer;">
+        <option value="">Go to...</option>
+        <optgroup label="Workflow Events">
+            <option value="/loaf/start">🥖 Start Loaf</option>
+            <option value="/log/fed">🍞 Fed</option>
+            <option value="/log/levain-ready">⏰ Levain Ready</option>
+            <option value="/log/mixed">🥣 Mixed</option>
+            <option value="/log/fold">🙌 Fold</option>
+            <option value="/log/shaped">👐 Shaped</option>
+            <option value="/log/fridge-in">❄️ Fridge In</option>
+            <option value="/log/oven-in">🔥 Oven In</option>
+            <option value="/log/remove-lid">🌡️ Remove Lid</option>
+            <option value="/log/oven-out">✅ Oven Out</option>
+            <option value="/complete">🎉 Complete</option>
+        </optgroup>
+        <optgroup label="Logging">
+            <option value="/temp">🌡️ Log Temperature</option>
+            <option value="/notes">📝 Add Note</option>
+        </optgroup>
+        <optgroup label="View">
+            <option value="/view/status">📊 View Status</option>
+            <option value="/view/history">📚 View History</option>
+            <option value="/qrcodes.pdf">📱 Get QR Codes</option>
+        </optgroup>
+    </select>
+</div>
+`
+
 const completePageHTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -156,6 +188,8 @@ const completePageHTML = `<!DOCTYPE html>
             </div>
 
             <button type="submit">Complete Bake</button>
+
+            ` + navDropdownHTML + `
         </form>
     </div>
 
@@ -454,6 +488,8 @@ const notesPageHTML = `<!DOCTYPE html>
         </div>
 
         <button onclick="addNote()">Add Note</button>
+
+        ` + navDropdownHTML + `
     </div>
 
     <script>
@@ -854,6 +890,8 @@ const tempPageHTML = `<!DOCTYPE html>
                 <label for="loaf" onclick="submitTemp('loaf')">Loaf</label>
             </div>
         </div>
+
+        ` + navDropdownHTML + `
     </div>
 
     <script>
@@ -1014,6 +1052,8 @@ const ovenInPageHTML = `<!DOCTYPE html>
             <button class="temp-btn" onclick="logOvenIn(475)">475°F</button>
             <button class="temp-btn" onclick="logOvenIn(480)">480°F</button>
         </div>
+
+        ` + navDropdownHTML + `
     </div>
     <script>
         async function logOvenIn(temp) {
@@ -1119,6 +1159,8 @@ const removeLidPageHTML = `<!DOCTYPE html>
             <button class="temp-btn" onclick="logRemoveLid(475)">475°F</button>
             <button class="temp-btn" onclick="logRemoveLid(480)">480°F</button>
         </div>
+
+        ` + navDropdownHTML + `
     </div>
     <script>
         async function logRemoveLid(temp) {
