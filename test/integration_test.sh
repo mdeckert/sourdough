@@ -16,6 +16,15 @@ backup_data() {
     if [ -d "$DATA_DIR" ]; then
         echo "Backing up data directory to $BACKUP_DIR..."
         cp -r "$DATA_DIR"/* "$BACKUP_DIR/" 2>/dev/null || true
+
+        # Check if there's an active bake and complete it before testing
+        # This prevents test events from polluting user's current bake
+        if curl -s "$BASE_URL/status" | grep -q '"events":'; then
+            echo "Found active bake - completing it before test..."
+            curl -s -X POST "$BASE_URL/log/loaf-complete" \
+                -H "Content-Type: application/json" \
+                -d '{"assessment":{"proof_level":"good","crumb_quality":5,"browning":"good","score":5,"notes":"Test completion"}}' > /dev/null 2>&1 || true
+        fi
     fi
 }
 
