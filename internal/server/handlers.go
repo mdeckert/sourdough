@@ -386,11 +386,6 @@ func (s *Server) handleAPICurrentBake(w http.ResponseWriter, r *http.Request) {
 
 // handleAPIBake returns a specific bake by date/timestamp
 func (s *Server) handleAPIBake(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	// Extract date from path: /api/bake/2025-10-07_19-06
 	path := strings.TrimPrefix(r.URL.Path, "/api/bake/")
 	if path == "" {
@@ -398,19 +393,37 @@ func (s *Server) handleAPIBake(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bake, err := s.storage.ReadBake(path)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error reading bake: %v", err), http.StatusInternalServerError)
-		return
-	}
+	switch r.Method {
+	case http.MethodGet:
+		bake, err := s.storage.ReadBake(path)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error reading bake: %v", err), http.StatusInternalServerError)
+			return
+		}
 
-	if len(bake.Events) == 0 {
-		http.Error(w, "Bake not found", http.StatusNotFound)
-		return
-	}
+		if len(bake.Events) == 0 {
+			http.Error(w, "Bake not found", http.StatusNotFound)
+			return
+		}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(bake)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(bake)
+
+	case http.MethodDelete:
+		err := s.storage.DeleteBake(path)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"status": "deleted", "date": path})
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
 }
 
 // handleAPIBakesList returns list of all bakes with summary info

@@ -352,3 +352,33 @@ func (s *Storage) GetLastEvent() (*models.Event, error) {
 
 	return &bake.Events[len(bake.Events)-1], nil
 }
+
+// DeleteBake moves a bake file to the trash directory
+func (s *Storage) DeleteBake(date string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Get the source file path
+	srcPath := s.getBakeFile(date)
+
+	// Check if file exists
+	if _, err := os.Stat(srcPath); os.IsNotExist(err) {
+		return fmt.Errorf("bake not found: %s", date)
+	}
+
+	// Create trash directory if it doesn't exist
+	trashDir := filepath.Join(s.dataDir, "trash")
+	if err := os.MkdirAll(trashDir, 0755); err != nil {
+		return fmt.Errorf("failed to create trash directory: %w", err)
+	}
+
+	// Destination path in trash
+	dstPath := filepath.Join(trashDir, fmt.Sprintf("bake_%s.jsonl", date))
+
+	// Move file to trash
+	if err := os.Rename(srcPath, dstPath); err != nil {
+		return fmt.Errorf("failed to move bake to trash: %w", err)
+	}
+
+	return nil
+}

@@ -1225,6 +1225,10 @@ const statusViewPageHTML = `<!DOCTYPE html>
                     <canvas id="tempChart"></canvas>
                 </div>
                 <div class="timeline" id="timeline"></div>
+                <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #e5e7eb; text-align: center;">
+                    <button class="btn" style="background: #dc2626; border-color: #dc2626;" onclick="deleteBake()">🗑️ Delete This Bake</button>
+                    <p style="color: #666; font-size: 12px; margin-top: 8px;">This will move the bake to the trash directory</p>
+                </div>
             </div>
             <div id="no-data" class="no-data" style="display: none;">
                 <h2>No Bakes Found</h2>
@@ -1471,6 +1475,43 @@ const statusViewPageHTML = `<!DOCTYPE html>
             }
         }
 
+        async function deleteBake() {
+            // Get the date parameter if viewing a specific bake
+            const urlParams = new URLSearchParams(window.location.search);
+            const date = urlParams.get('date');
+
+            if (!date) {
+                alert('Cannot delete the current in-progress bake. Only completed bakes can be deleted.');
+                return;
+            }
+
+            // Confirm deletion
+            const confirmMsg = 'Are you sure you want to delete this bake?\n\n' +
+                              'Date: ' + date + '\n\n' +
+                              'This will move it to the trash directory.';
+
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/bake/' + encodeURIComponent(date), {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert('Bake deleted successfully and moved to trash.');
+                    window.location.href = '/view/history';
+                } else {
+                    alert('Error deleting bake: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error deleting bake:', error);
+                alert('Error deleting bake: ' + error.message);
+            }
+        }
 
         // Load bake on page load
         loadBake();

@@ -213,6 +213,23 @@ Stored as part of `loaf-complete` event's `data` field:
 curl http://192.168.1.50:8080/status
 ```
 
+### Generate Test Dataset
+```bash
+./test/generate_test_data.sh
+# Creates comprehensive 2-day test bake: data/bake_2025-10-05_08-00.jsonl
+# View at: http://192.168.1.50:8080/view/status?date=2025-10-05_08-00
+```
+
+### Delete a Bake
+Bakes can be deleted via the UI (delete button at bottom of status page) or via API:
+```bash
+# Delete via API (moves to data/trash/)
+curl -X DELETE http://192.168.1.50:8080/api/bake/2025-10-05_08-00
+
+# Deleted files are moved to trash, not permanently removed
+ls data/trash/
+```
+
 ### Manual Event Logging (for testing)
 ```bash
 # Start bake
@@ -341,7 +358,9 @@ curl -I http://192.168.1.50:8080/qrcodes.pdf
 
 ### Data
 - Bake files: `data/bake_*.jsonl`
+- Deleted bakes: `data/trash/bake_*.jsonl` (moved here when deleted via UI/API)
 - QR codes: `qrcodes/qrcodes.pdf`
+- Test data generator: `test/generate_test_data.sh`
 
 ### Config
 - Systemd service: `/etc/systemd/system/sourdough.service`
