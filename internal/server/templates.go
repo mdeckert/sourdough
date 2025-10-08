@@ -486,21 +486,63 @@ const notesPageHTML = `<!DOCTYPE html>
                 return;
             }
 
-            // Validate file size (max 5MB)
-            if (file.size > 5 * 1024 * 1024) {
-                showError('Image too large (max 5MB)');
-                return;
-            }
+            // Compress and resize image before upload
+            compressImage(file, 1920, 0.85).then(compressedBlob => {
+                selectedImage = compressedBlob;
 
-            selectedImage = file;
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('previewImg').src = e.target.result;
+                    document.getElementById('imagePreview').style.display = 'block';
+                };
+                reader.readAsDataURL(compressedBlob);
+            }).catch(err => {
+                showError('Failed to process image: ' + err.message);
+            });
+        }
 
-            // Show preview
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('previewImg').src = e.target.result;
-                document.getElementById('imagePreview').style.display = 'block';
-            };
-            reader.readAsDataURL(file);
+        function compressImage(file, maxWidth, quality) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        // Calculate new dimensions
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > maxWidth) {
+                            height = (height * maxWidth) / width;
+                            width = maxWidth;
+                        }
+
+                        // Create canvas and draw resized image
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        // Convert to blob with compression
+                        canvas.toBlob(
+                            blob => {
+                                if (!blob) {
+                                    reject(new Error('Failed to compress image'));
+                                    return;
+                                }
+                                resolve(blob);
+                            },
+                            'image/jpeg',
+                            quality
+                        );
+                    };
+                    img.onerror = () => reject(new Error('Failed to load image'));
+                    img.src = e.target.result;
+                };
+                reader.onerror = () => reject(new Error('Failed to read file'));
+                reader.readAsDataURL(file);
+            });
         }
 
         function removeImage() {
