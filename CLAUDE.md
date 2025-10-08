@@ -81,10 +81,11 @@ journalctl -u sourdough -f
 ## Testing
 
 ### Test Suite Overview
-- **22 unit tests** (handlers + storage)
+- **26 unit tests** (handlers + storage + QR generator)
 - **33 integration tests** (full workflow with multiple instances)
 - **Coverage**: ~61-66%
 - **Data safety**: Integration tests backup and restore data automatically
+- **QR validation**: Tests ensure QR codes don't point to localhost
 
 ### Running Tests
 ```bash
@@ -155,11 +156,19 @@ Two separate fields to track different temps:
 - `dough_temp_f`: Dough temperature
 - Use `?type=dough` query param to specify dough temp
 
-### 4. Assessments
-Stored as part of `bake-complete` event's `data` field:
+### 4. QR Code URL Validation
+**Problem**: QR codes pointing to localhost don't work on mobile devices.
+
+**Solution**:
+- `qrgen` validates URL and rejects localhost/127.0.0.1
+- Tests ensure URLs use proper IP addresses or hostnames
+- Error message guides users to use server IP (e.g., 192.168.1.50:8080)
+
+### 5. Assessments
+Stored as part of `loaf-complete` event's `data` field:
 ```json
 {
-  "event": "bake-complete",
+  "event": "loaf-complete",
   "data": {
     "assessment": {
       "proof_level": "good|underproofed|overproofed",
@@ -177,7 +186,11 @@ Stored as part of `bake-complete` event's `data` field:
 ### Generate QR Codes
 ```bash
 ./bin/qrgen http://YOUR_SERVER_IP:8080
-# Creates qrcodes/qrcodes.pdf with all 13 QR codes
+# Example: ./bin/qrgen http://192.168.1.50:8080
+# Creates qrcodes/qrcodes.pdf with all 15 QR codes
+#
+# IMPORTANT: Must use server IP, not localhost!
+# Tool will reject localhost URLs to prevent broken QR codes
 ```
 
 ### View Bake History

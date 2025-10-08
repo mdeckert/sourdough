@@ -8,6 +8,7 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/jung-kurt/gofpdf"
 	"github.com/skip2/go-qrcode"
@@ -22,6 +23,11 @@ type EventQR struct {
 
 // GenerateAll generates QR codes for all common events
 func GenerateAll(serverURL, outputDir string) error {
+	// Validate server URL - reject localhost addresses
+	if isLocalhostURL(serverURL) {
+		return fmt.Errorf("server URL cannot be localhost/127.0.0.1 - QR codes must be accessible from mobile devices. Use your server's IP address (e.g., http://192.168.1.50:8080)")
+	}
+
 	// Create output directory
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
@@ -222,4 +228,13 @@ func generatePDF(events []EventQR, qrDir, outputPath string) error {
 	}
 
 	return pdf.OutputFileAndClose(outputPath)
+}
+
+// isLocalhostURL checks if a URL contains localhost or 127.0.0.1
+func isLocalhostURL(url string) bool {
+	url = strings.ToLower(url)
+	return strings.Contains(url, "localhost") ||
+		strings.Contains(url, "127.0.0.1") ||
+		strings.Contains(url, "0.0.0.0") ||
+		strings.Contains(url, "[::1]")
 }
