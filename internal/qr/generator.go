@@ -34,19 +34,22 @@ func GenerateAll(serverURL, outputDir string) error {
 	}
 
 	events := []EventQR{
-		{"start", "START LOAF", fmt.Sprintf("%s/loaf/start", serverURL)},
-		{"fed", "Fed", fmt.Sprintf("%s/log/fed", serverURL)},
-		{"levain-ready", "Levain Ready", fmt.Sprintf("%s/log/levain-ready", serverURL)},
-		{"mixed", "Mixed", fmt.Sprintf("%s/log/mixed", serverURL)},
-		{"fold", "Fold", fmt.Sprintf("%s/log/fold", serverURL)},
-		{"shaped", "Shaped", fmt.Sprintf("%s/log/shaped", serverURL)},
-		{"fridge-in", "Fridge In", fmt.Sprintf("%s/log/fridge-in", serverURL)},
-		{"oven-in", "Oven In", fmt.Sprintf("%s/log/oven-in", serverURL)},
-		{"remove-lid", "Remove Lid", fmt.Sprintf("%s/log/remove-lid", serverURL)},
-		{"oven-out", "Oven Out", fmt.Sprintf("%s/log/oven-out", serverURL)},
+		// Workflow stages (in order with numbers)
+		{"start", "1. START LOAF", fmt.Sprintf("%s/loaf/start", serverURL)},
+		{"fed", "2. Fed", fmt.Sprintf("%s/log/fed", serverURL)},
+		{"levain-ready", "3. Levain Ready", fmt.Sprintf("%s/log/levain-ready", serverURL)},
+		{"mixed", "4. Mixed", fmt.Sprintf("%s/log/mixed", serverURL)},
+		{"fold", "5. Fold", fmt.Sprintf("%s/log/fold", serverURL)},
+		{"shaped", "6. Shaped", fmt.Sprintf("%s/log/shaped", serverURL)},
+		{"fridge-in", "7. Fridge In", fmt.Sprintf("%s/log/fridge-in", serverURL)},
+		{"oven-in", "8. Oven In", fmt.Sprintf("%s/log/oven-in", serverURL)},
+		{"remove-lid", "9. Remove Lid", fmt.Sprintf("%s/log/remove-lid", serverURL)},
+		{"oven-out", "10. Oven Out", fmt.Sprintf("%s/log/oven-out", serverURL)},
+		{"complete", "11. COMPLETE", fmt.Sprintf("%s/complete", serverURL)},
+		// Anytime actions
 		{"temp", "LOG TEMP", fmt.Sprintf("%s/temp", serverURL)},
 		{"notes", "ADD NOTE", fmt.Sprintf("%s/notes", serverURL)},
-		{"complete", "COMPLETE", fmt.Sprintf("%s/complete", serverURL)},
+		// View actions
 		{"status", "VIEW STATUS", fmt.Sprintf("%s/view/status", serverURL)},
 		{"history", "VIEW HISTORY", fmt.Sprintf("%s/view/history", serverURL)},
 		{"qr-pdf", "GET QR CODES", fmt.Sprintf("%s/qrcodes.pdf", serverURL)},
@@ -156,34 +159,61 @@ func generatePDF(events []EventQR, qrDir, outputPath string) error {
 	pdf.SetMargins(10, 10, 10)
 	pdf.AddPage()
 
-	// Add title and workflow synopsis
+	// Add title
 	pdf.SetFont("Arial", "B", 14)
 	pdf.Cell(0, 8, "Sourdough Bread Logger - QR Codes")
 	pdf.Ln(10)
 
-	// Workflow synopsis
-	pdf.SetFont("Arial", "", 9)
-	pdf.SetTextColor(80, 80, 80)
+	// Feeding stages table
+	pdf.SetFont("Arial", "B", 10)
+	pdf.SetTextColor(0, 0, 0)
+	pdf.Cell(0, 6, "Feeding Stages")
+	pdf.Ln(6)
 
-	workflow := []string{
-		"WORKFLOW: START LOAF -> Fed -> Levain Ready -> Mixed -> Fold (3-4x) -> Shaped -> Fridge In -> Oven In -> Oven Out -> COMPLETE",
-		"",
-		"LOG TEMP: Scan anytime to log kitchen/dough temperature (critical for timing)",
-		"ADD NOTE: Scan anytime to add observations (crumb, taste, process notes)",
-		"COMPLETE: Final assessment (proof level, crumb, browning, score)",
-		"VIEW STATUS: See current bake timeline with temperature graphs",
-		"VIEW HISTORY: Browse all past bakes with scores and statistics",
-		"GET QR CODES: Download this PDF to your phone",
-	}
+	// Table headers
+	pdf.SetFont("Arial", "B", 8)
+	pdf.SetFillColor(230, 230, 230)
+	pdf.CellFormat(35, 5, "Stage", "1", 0, "C", true, 0, "")
+	pdf.CellFormat(25, 5, "Water", "1", 0, "C", true, 0, "")
+	pdf.CellFormat(30, 5, "Rye/Spelt", "1", 0, "C", true, 0, "")
+	pdf.CellFormat(30, 5, "Bread Flour", "1", 0, "C", true, 0, "")
+	pdf.CellFormat(35, 5, "Starter/Levain", "1", 0, "C", true, 0, "")
+	pdf.CellFormat(20, 5, "Salt", "1", 0, "C", true, 0, "")
+	pdf.Ln(-1)
 
-	for _, line := range workflow {
-		if line == "" {
-			pdf.Ln(3)
-		} else {
-			pdf.MultiCell(0, 4, line, "", "L", false)
-		}
-	}
+	// Table data
+	pdf.SetFont("Arial", "", 7)
+	pdf.SetFillColor(255, 255, 255)
 
+	// Stage 1: Fed (create levain)
+	pdf.CellFormat(35, 5, "1. Fed (Levain)", "1", 0, "L", false, 0, "")
+	pdf.CellFormat(25, 5, "135g (~5oz)", "1", 0, "R", false, 0, "")
+	pdf.CellFormat(30, 5, "40g", "1", 0, "R", false, 0, "")
+	pdf.CellFormat(30, 5, "75g", "1", 0, "R", false, 0, "")
+	pdf.CellFormat(35, 5, "266g starter", "1", 0, "R", false, 0, "")
+	pdf.CellFormat(20, 5, "-", "1", 0, "C", false, 0, "")
+	pdf.Ln(-1)
+
+	// Stage 2: Levain Ready (goes to fridge)
+	pdf.CellFormat(35, 5, "2. Levain Ready*", "1", 0, "L", false, 0, "")
+	pdf.CellFormat(25, 5, "120g (~4oz)", "1", 0, "R", false, 0, "")
+	pdf.CellFormat(30, 5, "-", "1", 0, "C", false, 0, "")
+	pdf.CellFormat(30, 5, "90g", "1", 0, "R", false, 0, "")
+	pdf.CellFormat(35, 5, "57g levain", "1", 0, "R", false, 0, "")
+	pdf.CellFormat(20, 5, "-", "1", 0, "C", false, 0, "")
+	pdf.Ln(-1)
+
+	// Loaf: Mixed
+	pdf.CellFormat(35, 5, "3. Mixed (Loaf)", "1", 0, "L", false, 0, "")
+	pdf.CellFormat(25, 5, "400g", "1", 0, "R", false, 0, "")
+	pdf.CellFormat(30, 5, "400g", "1", 0, "R", false, 0, "")
+	pdf.CellFormat(30, 5, "400g", "1", 0, "R", false, 0, "")
+	pdf.CellFormat(35, 5, "466g levain", "1", 0, "R", false, 0, "")
+	pdf.CellFormat(20, 5, "20g", "1", 0, "R", false, 0, "")
+	pdf.Ln(-1)
+
+	pdf.SetFont("Arial", "I", 6)
+	pdf.Cell(0, 4, "* Stage 2 goes back in freezer")
 	pdf.Ln(8)
 	pdf.SetTextColor(0, 0, 0)
 
