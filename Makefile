@@ -67,6 +67,11 @@ test-coverage:
 	@go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
 
+# Generate test data
+test-data:
+	@echo "Generating test data..."
+	@./test/generate_test_data.sh
+
 # Run integration tests (requires server to be running)
 test-integration:
 	@echo "Running integration tests..."
@@ -98,6 +103,7 @@ help:
 	@echo "  make clean            - Remove build artifacts"
 	@echo "  make test             - Run unit tests"
 	@echo "  make test-coverage    - Run tests with coverage report"
+	@echo "  make test-data        - Generate test dataset"
 	@echo "  make test-integration - Run integration tests"
 	@echo "  make test-all         - Run all tests (unit + integration)"
 	@echo "  make deps             - Download dependencies"

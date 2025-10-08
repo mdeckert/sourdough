@@ -103,6 +103,9 @@ make test
 # Coverage report (generates coverage.html)
 make test-coverage
 
+# Generate test dataset (comprehensive 2-day bake)
+make test-data
+
 # Integration tests (requires server running, backs up & restores data)
 make test-integration
 
@@ -110,7 +113,11 @@ make test-integration
 make test-all
 ```
 
-**IMPORTANT**: Integration tests automatically backup your data directory before running and restore it afterward. Your production data is safe even if tests fail!
+**Test Data Behavior**:
+- Integration tests check for test dataset (`bake_2025-10-05_08-00.jsonl`)
+- If missing: auto-generates and removes after tests complete
+- If present: uses existing data and preserves it
+- Use `make test-data` to manually generate/regenerate test dataset
 
 ### Before Making Changes
 1. Run `make test` to establish baseline

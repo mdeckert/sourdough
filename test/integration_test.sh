@@ -8,6 +8,8 @@ BASE_URL="http://192.168.1.50:8080"
 DATA_DIR="./data"
 BACKUP_DIR=$(mktemp -d)
 TEMP_DIR=$(mktemp -d)
+TEST_DATA_FILE="$DATA_DIR/bake_2025-10-05_08-00.jsonl"
+TEST_DATA_GENERATED=false
 
 # Backup and restore functions
 backup_data() {
@@ -27,6 +29,12 @@ restore_data() {
 
 cleanup() {
     rm -rf "$TEMP_DIR"
+
+    # If we generated test data, remove it
+    if [ "$TEST_DATA_GENERATED" = true ] && [ -f "$TEST_DATA_FILE" ]; then
+        echo "Removing auto-generated test data..."
+        rm -f "$TEST_DATA_FILE"
+    fi
 }
 
 # Set up traps
@@ -323,11 +331,19 @@ test_invalid_requests
 test_view_pages() {
     log_test "Testing view pages with comprehensive dataset"
 
-    # Test that our comprehensive test bake exists
-    log_test "Verifying test dataset exists (2025-10-05_08-00)"
-    if [ ! -f "$DATA_DIR/bake_2025-10-05_08-00.jsonl" ]; then
-        log_fail "Test dataset file not found"
-        return
+    # Check if test data exists, generate if missing
+    if [ ! -f "$TEST_DATA_FILE" ]; then
+        log_test "Test dataset not found, generating..."
+        if [ -f "./test/generate_test_data.sh" ]; then
+            ./test/generate_test_data.sh > /dev/null
+            TEST_DATA_GENERATED=true
+            log_test "Test data generated (will be removed after tests)"
+        else
+            log_fail "Test data generator script not found"
+            return
+        fi
+    else
+        log_test "Using existing test dataset (will be preserved)"
     fi
 
     # Test API endpoint for specific bake
