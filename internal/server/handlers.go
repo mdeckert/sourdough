@@ -65,49 +65,85 @@ func (s *Server) Start() error {
 	return http.ListenAndServe(addr, handler)
 }
 
-// autoLogTemperature logs kitchen temperature every 4 hours if there's an active bake
+// autoLogTemperature logs kitchen temperature on a fixed schedule (12am, 4am, 8am, 12pm, 4pm, 8pm)
 func (s *Server) autoLogTemperature() {
+	log.Printf("Automatic temperature logging enabled (every 4 hours on fixed schedule)")
+
+	// Calculate time until next scheduled log
+	now := time.Now()
+	nextLog := getNextLogTime(now)
+	duration := nextLog.Sub(now)
+
+	log.Printf("Next auto-log scheduled for: %s (in %s)", nextLog.Format("3:04 PM"), duration.Round(time.Minute))
+
+	// Initial delay to sync with schedule
+	time.Sleep(duration)
+
+	// Log immediately at the scheduled time
+	s.logTemperature()
+
+	// Then log every 4 hours
 	ticker := time.NewTicker(4 * time.Hour)
 	defer ticker.Stop()
 
-	log.Printf("Automatic temperature logging enabled (every 4 hours)")
-
 	for range ticker.C {
-		// Check if there's an active bake
-		hasBake, err := s.storage.HasCurrentBake()
-		if err != nil {
-			log.Printf("Warning: Failed to check for active bake: %v", err)
-			continue
-		}
-
-		if !hasBake {
-			// No active bake, skip logging
-			continue
-		}
-
-		// Fetch temperature from Ecobee
-		temp, err := s.ecobee.GetTemperature()
-		if err != nil {
-			log.Printf("Warning: Failed to auto-log temperature: %v", err)
-			continue
-		}
-
-		if temp <= 0 {
-			log.Printf("Warning: Invalid temperature from Ecobee: %.1f", temp)
-			continue
-		}
-
-		// Create temperature event
-		event := models.NewEvent(models.EventTemperature).WithTemp(temp)
-
-		// Save event
-		if err := s.storage.AppendEvent(event); err != nil {
-			log.Printf("Error: Failed to save auto-logged temperature: %v", err)
-			continue
-		}
-
-		log.Printf("Auto-logged kitchen temperature: %.1f°F", temp)
+		s.logTemperature()
 	}
+}
+
+// getNextLogTime returns the next scheduled log time (00:00, 04:00, 08:00, 12:00, 16:00, 20:00)
+func getNextLogTime(now time.Time) time.Time {
+	// Round to next 4-hour boundary
+	hour := now.Hour()
+	nextHour := ((hour / 4) + 1) * 4
+	if nextHour >= 24 {
+		nextHour = 0
+	}
+
+	next := time.Date(now.Year(), now.Month(), now.Day(), nextHour, 0, 0, 0, now.Location())
+	if next.Before(now) {
+		next = next.Add(24 * time.Hour)
+	}
+
+	return next
+}
+
+// logTemperature performs the actual temperature logging
+func (s *Server) logTemperature() {
+	// Check if there's an active bake
+	hasBake, err := s.storage.HasCurrentBake()
+	if err != nil {
+		log.Printf("Warning: Failed to check for active bake: %v", err)
+		return
+	}
+
+	if !hasBake {
+		log.Printf("Skipping auto-log: no active bake")
+		return
+	}
+
+	// Fetch temperature from Ecobee
+	temp, err := s.ecobee.GetTemperature()
+	if err != nil {
+		log.Printf("Warning: Failed to auto-log temperature: %v", err)
+		return
+	}
+
+	if temp <= 0 {
+		log.Printf("Warning: Invalid temperature from Ecobee: %.1f", temp)
+		return
+	}
+
+	// Create temperature event
+	event := models.NewEvent(models.EventTemperature).WithTemp(temp)
+
+	// Save event
+	if err := s.storage.AppendEvent(event); err != nil {
+		log.Printf("Error: Failed to save auto-logged temperature: %v", err)
+		return
+	}
+
+	log.Printf("Auto-logged kitchen temperature: %.1f°F", temp)
 }
 
 // loggingMiddleware logs all requests
