@@ -406,8 +406,8 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Auto-fetch kitchen temp from Ecobee if enabled and no temp already set
-	// Only fetch for non-temperature events to avoid overwriting manual temps
-	if s.ecobee.IsEnabled() && event.Event != models.EventTemperature && event.TempF == nil {
+	// Skip for temperature events (to avoid overwriting manual temps) and notes (not relevant)
+	if s.ecobee.IsEnabled() && event.Event != models.EventTemperature && event.Event != models.EventNote && event.TempF == nil {
 		if temp, err := s.ecobee.GetTemperature(); err == nil && temp > 0 {
 			event.WithTemp(temp)
 			log.Printf("Auto-fetched kitchen temp from Ecobee: %.1f°F", temp)
