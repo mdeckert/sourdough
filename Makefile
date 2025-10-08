@@ -77,11 +77,19 @@ test-integration:
 	@echo "Running integration tests..."
 	@./test/integration_test.sh
 
-# Run all tests (unit + integration)
+# Test UI elements
+test-ui:
+	@echo "Testing UI elements..."
+	@./test/test_ui.sh
+
+# Run all tests (unit + integration + UI)
 test-all: test
 	@echo ""
 	@echo "Running integration tests..."
 	@./test/integration_test.sh
+	@echo ""
+	@echo "Running UI tests..."
+	@./test/test_ui.sh
 
 # Download dependencies
 deps:
@@ -105,5 +113,6 @@ help:
 	@echo "  make test-coverage    - Run tests with coverage report"
 	@echo "  make test-data        - Generate test dataset"
 	@echo "  make test-integration - Run integration tests"
-	@echo "  make test-all         - Run all tests (unit + integration)"
+	@echo "  make test-ui          - Test UI elements"
+	@echo "  make test-all         - Run all tests (unit + integration + UI)"
 	@echo "  make deps             - Download dependencies"

@@ -1313,19 +1313,47 @@ const statusViewPageHTML = `<!DOCTYPE html>
         function displayChart(bake) {
             const ctx = document.getElementById('tempChart');
 
+            // Find oven-in event to split kitchen vs oven temps
+            const ovenInIdx = bake.events.findIndex(e => e.event === 'oven-in');
+
             // Prepare data points
             const labels = [];
             const kitchenTemps = [];
             const doughTemps = [];
+            const ovenTemps = [];
+            const notePoints = [];
             const eventAnnotations = [];
 
             bake.events.forEach((event, idx) => {
                 const time = new Date(event.timestamp);
                 labels.push(time);
 
-                // Temperature data
-                kitchenTemps.push(event.temp_f || null);
+                // Temperature data - split kitchen vs oven temps
+                if (event.temp_f) {
+                    if (ovenInIdx >= 0 && idx >= ovenInIdx) {
+                        // After oven-in, temp_f is oven temp
+                        ovenTemps.push(event.temp_f);
+                        kitchenTemps.push(null);
+                    } else {
+                        // Before oven-in, temp_f is kitchen temp
+                        kitchenTemps.push(event.temp_f);
+                        ovenTemps.push(null);
+                    }
+                } else {
+                    kitchenTemps.push(null);
+                    ovenTemps.push(null);
+                }
+
                 doughTemps.push(event.dough_temp_f || null);
+
+                // Note markers
+                if (event.note) {
+                    notePoints.push({
+                        x: time,
+                        y: event.temp_f || event.dough_temp_f || 70,
+                        note: event.note
+                    });
+                }
 
                 // Event markers
                 if (['oven-in', 'oven-out', 'shaped', 'mixed', 'fridge-in'].includes(event.event)) {
@@ -1361,12 +1389,29 @@ const statusViewPageHTML = `<!DOCTYPE html>
                             spanGaps: true
                         },
                         {
-                            label: 'Dough Temp (°F)',
+                            label: 'Dough/Loaf Temp (°F)',
                             data: doughTemps,
                             borderColor: 'rgb(220, 38, 38)',
                             backgroundColor: 'rgba(220, 38, 38, 0.1)',
                             tension: 0.4,
                             spanGaps: true
+                        },
+                        {
+                            label: 'Oven Temp (°F)',
+                            data: ovenTemps,
+                            borderColor: 'rgb(249, 115, 22)',
+                            backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                            tension: 0.4,
+                            spanGaps: true
+                        },
+                        {
+                            label: 'Notes',
+                            data: notePoints,
+                            type: 'scatter',
+                            backgroundColor: 'rgb(251, 191, 36)',
+                            pointRadius: 6,
+                            pointHoverRadius: 8,
+                            showLine: false
                         }
                     ]
                 },
@@ -1403,6 +1448,10 @@ const statusViewPageHTML = `<!DOCTYPE html>
                     },
                     plugins: {
                         zoom: {
+                            limits: {
+                                x: {min: 'original', max: 'original'},
+                                y: {min: 'original', max: 'original'}
+                            },
                             zoom: {
                                 wheel: {
                                     enabled: true,
@@ -1418,7 +1467,14 @@ const statusViewPageHTML = `<!DOCTYPE html>
                             }
                         },
                         tooltip: {
-                            enabled: true
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    if (context.dataset.label === 'Notes' && context.raw.note) {
+                                        return context.raw.note;
+                                    }
+                                    return '';
+                                }
+                            }
                         }
                     }
                 }
@@ -1468,9 +1524,28 @@ const statusViewPageHTML = `<!DOCTYPE html>
                 const start = new Date(ovenInEvent.timestamp);
                 const end = ovenOutEvent ? new Date(ovenOutEvent.timestamp) : new Date(start.getTime() + 60*60*1000);
 
+                // Find all temps during baking period
+                const bakingEvents = bakeData.events.filter(e => {
+                    const t = new Date(e.timestamp);
+                    return t >= start && t <= end;
+                });
+
+                const temps = [];
+                bakingEvents.forEach(e => {
+                    if (e.temp_f) temps.push(e.temp_f);
+                    if (e.dough_temp_f) temps.push(e.dough_temp_f);
+                });
+
+                // Calculate Y-axis range with some padding
+                let minTemp = Math.min(...temps);
+                let maxTemp = Math.max(...temps);
+                const padding = (maxTemp - minTemp) * 0.1 || 50;
+                minTemp = Math.max(0, Math.floor(minTemp - padding));
+                maxTemp = Math.ceil(maxTemp + padding);
+
                 chart.zoomScale('x', {min: start, max: end}, 'default');
-                chart.options.scales.y.min = 300;
-                chart.options.scales.y.max = 500;
+                chart.options.scales.y.min = minTemp;
+                chart.options.scales.y.max = maxTemp;
                 chart.update();
             }
         }
