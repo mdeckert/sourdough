@@ -33,9 +33,9 @@ func New(dataDir string) (*Storage, error) {
 }
 
 // getCurrentBakeFile returns the path to the current active bake file
-// An active bake is one that hasn't been completed (no bake-complete event)
+// An active bake is one that hasn't been completed (no loaf-complete event)
 func (s *Storage) getCurrentBakeFile() string {
-	// First, check if there's an active bake (most recent file without bake-complete)
+	// First, check if there's an active bake (most recent file without loaf-complete)
 	files, err := os.ReadDir(s.dataDir)
 	if err != nil {
 		// If we can't read dir, fall back to today's date
@@ -67,7 +67,7 @@ func (s *Storage) getCurrentBakeFile() string {
 		return bakeFiles[i].modTime.After(bakeFiles[j].modTime)
 	})
 
-	// Check most recent files for active bake (no bake-complete event)
+	// Check most recent files for active bake (no loaf-complete event)
 	for _, bf := range bakeFiles {
 		filePath := filepath.Join(s.dataDir, bf.name)
 		if !s.isCompleted(filePath) {
@@ -80,7 +80,7 @@ func (s *Storage) getCurrentBakeFile() string {
 	return filepath.Join(s.dataDir, fmt.Sprintf("bake_%s.jsonl", date))
 }
 
-// isCompleted checks if a bake file has a bake-complete event
+// isCompleted checks if a bake file has a loaf-complete event
 func (s *Storage) isCompleted(filePath string) bool {
 	f, err := os.Open(filePath)
 	if err != nil {
@@ -94,7 +94,7 @@ func (s *Storage) isCompleted(filePath string) bool {
 		if err := json.Unmarshal(scanner.Bytes(), &event); err != nil {
 			continue
 		}
-		if event.Event == models.EventBakeComplete {
+		if event.Event == models.EventLoafComplete {
 			return true
 		}
 	}
@@ -176,10 +176,10 @@ func (s *Storage) ReadCurrentBake() (*models.Bake, error) {
 		Events: events,
 	}
 
-	// Check if last event is bake-complete with assessment
+	// Check if last event is loaf-complete with assessment
 	if len(events) > 0 {
 		lastEvent := events[len(events)-1]
-		if lastEvent.Event == models.EventBakeComplete && lastEvent.Data != nil {
+		if lastEvent.Event == models.EventLoafComplete && lastEvent.Data != nil {
 			if assessmentData, ok := lastEvent.Data["assessment"]; ok {
 				assessmentJSON, _ := json.Marshal(assessmentData)
 				var assessment models.Assessment
@@ -235,10 +235,10 @@ func (s *Storage) ReadBake(date string) (*models.Bake, error) {
 		Events: events,
 	}
 
-	// Check if last event is an assessment (bake-complete with assessment data)
+	// Check if last event is an assessment (loaf-complete with assessment data)
 	if len(events) > 0 {
 		lastEvent := events[len(events)-1]
-		if lastEvent.Event == models.EventBakeComplete && lastEvent.Data != nil {
+		if lastEvent.Event == models.EventLoafComplete && lastEvent.Data != nil {
 			// Try to extract assessment from data
 			if assessmentData, ok := lastEvent.Data["assessment"]; ok {
 				assessmentJSON, _ := json.Marshal(assessmentData)
@@ -306,7 +306,7 @@ func (s *Storage) HasCurrentBake() (bool, error) {
 
 	// Check if the bake is completed
 	for _, event := range bake.Events {
-		if event.Event == models.EventBakeComplete {
+		if event.Event == models.EventLoafComplete {
 			return false, nil
 		}
 	}

@@ -73,7 +73,7 @@ test_start_bake() {
 
     response=$(curl -s -X POST "$BASE_URL/bake/start")
 
-    if echo "$response" | grep '"status":"bake started"' > /dev/null 2>&1; then
+    if echo "$response" | grep '"status":"loaf started"' > /dev/null 2>&1; then
         log_pass "Bake started successfully"
     elif echo "$response" | grep "already started" > /dev/null 2>&1; then
         log_pass "Bake already active (continuing with existing bake)"
@@ -179,7 +179,7 @@ test_fold_counting() {
 test_bake_completion() {
     log_test "Complete bake with assessment"
 
-    response=$(curl -s -X POST "$BASE_URL/log/bake-complete" \
+    response=$(curl -s -X POST "$BASE_URL/log/loaf-complete" \
         -H "Content-Type: application/json" \
         -d '{
             "assessment": {
@@ -205,7 +205,7 @@ test_new_bake_after_completion() {
     sleep 0.2
 
     response=$(curl -s -X POST "$BASE_URL/bake/start")
-    if echo "$response" | grep -q '"status":"bake started"'; then
+    if echo "$response" | grep -q '"status":"loaf started"'; then
         log_pass "New bake started after completion"
     else
         log_fail "Failed to start new bake after completion: $response"

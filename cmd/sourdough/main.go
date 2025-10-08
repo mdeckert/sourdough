@@ -65,7 +65,7 @@ func printUsage() {
 	fmt.Println("  sourdough review <date>            Review a specific bake")
 	fmt.Println("\nEvents:")
 	fmt.Println("  starter-out, fed, levain-ready, mixed, fold, shaped,")
-	fmt.Println("  fridge-in, fridge-out, oven-in, bake-complete")
+	fmt.Println("  fridge-in, fridge-out, oven-in, oven-out, loaf-complete")
 	fmt.Println("\nExamples:")
 	fmt.Println("  sourdough start")
 	fmt.Println("  sourdough log mixed")
@@ -78,7 +78,7 @@ func printUsage() {
 }
 
 func handleStart() {
-	resp, err := http.Post(serverURL+"/bake/start", "application/json", nil)
+	resp, err := http.Post(serverURL+"/loaf/start", "application/json", nil)
 	if err != nil {
 		fmt.Printf("Error: Failed to connect to server: %v\n", err)
 		fmt.Printf("Make sure the server is running on %s\n", serverURL)
@@ -319,8 +319,8 @@ func handleComplete() {
 		Notes:        notes,
 	}
 
-	// Create bake-complete event with assessment
-	event := models.NewEvent(models.EventBakeComplete)
+	// Create loaf-complete event with assessment
+	event := models.NewEvent(models.EventLoafComplete)
 	event.Data = map[string]interface{}{
 		"assessment": assessment,
 	}

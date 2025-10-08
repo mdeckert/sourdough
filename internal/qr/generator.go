@@ -28,7 +28,7 @@ func GenerateAll(serverURL, outputDir string) error {
 	}
 
 	events := []EventQR{
-		{"start", "START LOAF", fmt.Sprintf("%s/bake/start", serverURL)},
+		{"start", "START LOAF", fmt.Sprintf("%s/loaf/start", serverURL)},
 		{"fed", "Fed", fmt.Sprintf("%s/log/fed", serverURL)},
 		{"levain-ready", "Levain Ready", fmt.Sprintf("%s/log/levain-ready", serverURL)},
 		{"mixed", "Mixed", fmt.Sprintf("%s/log/mixed", serverURL)},
@@ -36,9 +36,12 @@ func GenerateAll(serverURL, outputDir string) error {
 		{"shaped", "Shaped", fmt.Sprintf("%s/log/shaped", serverURL)},
 		{"fridge-in", "Fridge In", fmt.Sprintf("%s/log/fridge-in", serverURL)},
 		{"oven-in", "Oven In", fmt.Sprintf("%s/log/oven-in", serverURL)},
+		{"oven-out", "Oven Out", fmt.Sprintf("%s/log/oven-out", serverURL)},
 		{"temp", "LOG TEMP", fmt.Sprintf("%s/temp", serverURL)},
 		{"notes", "ADD NOTE", fmt.Sprintf("%s/notes", serverURL)},
 		{"complete", "COMPLETE", fmt.Sprintf("%s/complete", serverURL)},
+		{"status", "VIEW STATUS", fmt.Sprintf("%s/view/status", serverURL)},
+		{"history", "VIEW HISTORY", fmt.Sprintf("%s/view/history", serverURL)},
 		{"qr-pdf", "GET QR CODES", fmt.Sprintf("%s/qrcodes.pdf", serverURL)},
 	}
 
@@ -156,11 +159,13 @@ func generatePDF(events []EventQR, qrDir, outputPath string) error {
 	pdf.SetTextColor(80, 80, 80)
 
 	workflow := []string{
-		"WORKFLOW: START LOAF -> Fed -> Levain Ready -> Mixed -> Fold (3-4x) -> Shaped -> Fridge In -> Oven In -> COMPLETE",
+		"WORKFLOW: START LOAF -> Fed -> Levain Ready -> Mixed -> Fold (3-4x) -> Shaped -> Fridge In -> Oven In -> Oven Out -> COMPLETE",
 		"",
 		"LOG TEMP: Scan anytime to log kitchen/dough temperature (critical for timing)",
 		"ADD NOTE: Scan anytime to add observations (crumb, taste, process notes)",
-		"COMPLETE: Assessment form (proof level, crumb, browning, score)",
+		"COMPLETE: Final assessment (proof level, crumb, browning, score)",
+		"VIEW STATUS: See current bake timeline with temperature graphs",
+		"VIEW HISTORY: Browse all past bakes with scores and statistics",
 		"GET QR CODES: Download this PDF to your phone",
 	}
 

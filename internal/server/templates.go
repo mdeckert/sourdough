@@ -184,7 +184,7 @@ const completePageHTML = `<!DOCTYPE html>
             button.textContent = 'Completing...';
 
             try {
-                const response = await fetch('/log/bake-complete', {
+                const response = await fetch('/log/loaf-complete', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ assessment: data })
@@ -771,6 +771,750 @@ const tempPageHTML = `<!DOCTYPE html>
             el.style.display = 'block';
             document.getElementById('success').style.display = 'none';
         }
+    </script>
+</body>
+</html>`
+
+const historyViewPageHTML = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bake History</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+        .header {
+            padding: 30px;
+            border-bottom: 2px solid #f3f4f6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        h1 { color: #333; font-size: 32px; margin-bottom: 10px; }
+        .subtitle { color: #666; font-size: 16px; }
+        .content { padding: 30px; }
+        .loading { text-align: center; padding: 40px; color: #666; font-size: 18px; }
+        .no-bakes { text-align: center; padding: 60px; color: #666; }
+        .search-filter {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .filter-btn {
+            padding: 12px 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .filter-btn.active {
+            background: #f093fb;
+            color: white;
+            border-color: #f093fb;
+        }
+        .bake-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .bake-card {
+            background: #f9fafb;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        .bake-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-color: #f093fb;
+        }
+        .bake-date {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        .bake-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+        }
+        .bake-stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .stat {
+            font-size: 14px;
+            color: #666;
+        }
+        .stat strong {
+            color: #333;
+        }
+        .bake-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-complete {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .status-in-progress {
+            background: #fef3c7;
+            color: #854d0e;
+        }
+        .assessment {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #e5e7eb;
+        }
+        .score-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 18px;
+            font-weight: 700;
+        }
+        .proof-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+        .proof-good { background: #dcfce7; color: #166534; }
+        .proof-under { background: #fef3c7; color: #854d0e; }
+        .proof-over { background: #fee2e2; color: #991b1b; }
+        .stats-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 12px;
+        }
+        .summary-item {
+            text-align: center;
+        }
+        .summary-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #f093fb;
+        }
+        .summary-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>📚 Bake History</h1>
+                <p class="subtitle" id="subtitle">Loading bakes...</p>
+            </div>
+        </div>
+        <div class="content">
+            <div class="loading" id="loading">Loading bake history...</div>
+            <div id="history-content" style="display: none;">
+                <div class="stats-summary" id="stats-summary"></div>
+                <div class="search-filter">
+                    <input type="text" class="search-input" id="searchInput" placeholder="Search bakes by date or notes...">
+                    <button class="filter-btn active" onclick="filterBakes('all')">All</button>
+                    <button class="filter-btn" onclick="filterBakes('complete')">Completed</button>
+                    <button class="filter-btn" onclick="filterBakes('in-progress')">In Progress</button>
+                </div>
+                <div class="bake-grid" id="bakeGrid"></div>
+            </div>
+            <div id="no-bakes" class="no-bakes" style="display: none;">
+                <h2>No Bakes Yet</h2>
+                <p>Start your first bake to see history</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allBakes = [];
+        let currentFilter = 'all';
+
+        async function loadHistory() {
+            try {
+                const response = await fetch('/api/bakes');
+                allBakes = await response.json();
+
+                if (!allBakes || allBakes.length === 0) {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('no-bakes').style.display = 'block';
+                    return;
+                }
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('history-content').style.display = 'block';
+                document.getElementById('subtitle').textContent = 'Viewing ' + allBakes.length + ' bakes';
+
+                displayStatsSummary();
+                displayBakes(allBakes);
+
+                // Add search listener
+                document.getElementById('searchInput').addEventListener('input', handleSearch);
+            } catch (error) {
+                console.error('Error loading history:', error);
+                document.getElementById('loading').innerHTML = 'Error loading bake history';
+            }
+        }
+
+        function displayStatsSummary() {
+            const completed = allBakes.filter(b => b.completed).length;
+            const totalEvents = allBakes.reduce((sum, b) => sum + b.event_count, 0);
+            const avgEvents = totalEvents / allBakes.length;
+
+            const scores = allBakes
+                .filter(b => b.assessment && b.assessment.score)
+                .map(b => b.assessment.score);
+            const avgScore = scores.length > 0
+                ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)
+                : 'N/A';
+
+            const html =
+                '<div class="summary-item"><div class="summary-value">' + allBakes.length + '</div><div class="summary-label">Total Bakes</div></div>' +
+                '<div class="summary-item"><div class="summary-value">' + completed + '</div><div class="summary-label">Completed</div></div>' +
+                '<div class="summary-item"><div class="summary-value">' + avgEvents.toFixed(0) + '</div><div class="summary-label">Avg Events</div></div>' +
+                '<div class="summary-item"><div class="summary-value">' + avgScore + '</div><div class="summary-label">Avg Score</div></div>';
+
+            document.getElementById('stats-summary').innerHTML = html;
+        }
+
+        function displayBakes(bakes) {
+            const grid = document.getElementById('bakeGrid');
+            grid.innerHTML = '';
+
+            bakes.forEach(bake => {
+                const card = document.createElement('div');
+                card.className = 'bake-card';
+                card.onclick = () => window.location.href = '/view/status'; // Could be enhanced to show specific bake
+
+                let html = '<div class="bake-date">' + bake.date + '</div>';
+                html += '<div class="bake-title">' + bake.start_time + '</div>';
+                html += '<div class="bake-stats">';
+                html += '<span class="stat"><strong>' + bake.event_count + '</strong> events</span>';
+                html += '</div>';
+
+                if (bake.completed) {
+                    html += '<span class="bake-status status-complete">✓ Completed</span>';
+                    if (bake.end_time) {
+                        html += '<div class="bake-date" style="margin-top: 8px;">Finished: ' + bake.end_time + '</div>';
+                    }
+                } else {
+                    html += '<span class="bake-status status-in-progress">⏳ In Progress</span>';
+                }
+
+                if (bake.assessment) {
+                    html += '<div class="assessment">';
+                    if (bake.assessment.score) {
+                        html += '<span class="score-badge">' + bake.assessment.score + '/10</span>';
+                    }
+                    if (bake.assessment.proof_level) {
+                        const proofClass = bake.assessment.proof_level === 'good' ? 'proof-good' :
+                                         bake.assessment.proof_level === 'underproofed' ? 'proof-under' : 'proof-over';
+                        html += '<span class="proof-badge ' + proofClass + '">' + bake.assessment.proof_level + '</span>';
+                    }
+                    if (bake.assessment.notes) {
+                        html += '<div class="bake-date" style="margin-top: 8px;">📝 ' + bake.assessment.notes + '</div>';
+                    }
+                    html += '</div>';
+                }
+
+                card.innerHTML = html;
+                grid.appendChild(card);
+            });
+        }
+
+        function filterBakes(filter) {
+            currentFilter = filter;
+
+            // Update button states
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            applyFilters();
+        }
+
+        function handleSearch() {
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+            let filtered = allBakes;
+
+            // Apply status filter
+            if (currentFilter === 'complete') {
+                filtered = filtered.filter(b => b.completed);
+            } else if (currentFilter === 'in-progress') {
+                filtered = filtered.filter(b => !b.completed);
+            }
+
+            // Apply search filter
+            if (searchTerm) {
+                filtered = filtered.filter(b => {
+                    return b.date.toLowerCase().includes(searchTerm) ||
+                           b.start_time.toLowerCase().includes(searchTerm) ||
+                           (b.assessment && b.assessment.notes && b.assessment.notes.toLowerCase().includes(searchTerm));
+                });
+            }
+
+            displayBakes(filtered);
+        }
+
+        // Load history on page load
+        loadHistory();
+    </script>
+</body>
+</html>`
+
+const statusViewPageHTML = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bake Status</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+        .header {
+            padding: 30px;
+            border-bottom: 2px solid #f3f4f6;
+        }
+        h1 { color: #333; font-size: 32px; margin-bottom: 10px; }
+        .subtitle { color: #666; font-size: 16px; }
+        .content { padding: 30px; }
+        .loading { text-align: center; padding: 40px; color: #666; font-size: 18px; }
+        .chart-container { position: relative; height: 400px; margin-bottom: 30px; }
+        .timeline { margin-top: 30px; }
+        .event-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f9fafb;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        .event-time { font-size: 12px; color: #666; margin-bottom: 5px; }
+        .event-name { font-size: 16px; font-weight: 600; color: #333; }
+        .event-details { font-size: 14px; color: #666; margin-top: 5px; }
+        .event-note {
+            background: #fef3c7;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 8px;
+            font-style: italic;
+        }
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: #667eea;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn:hover { background: #5568d3; }
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #333;
+        }
+        .btn-secondary:hover { background: #d1d5db; }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: #f9fafb;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .stat-value { font-size: 32px; font-weight: 700; color: #667eea; }
+        .stat-label { font-size: 14px; color: #666; margin-top: 5px; }
+        .no-data { text-align: center; padding: 60px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Bake Status</h1>
+            <p class="subtitle" id="subtitle">Loading current bake...</p>
+        </div>
+        <div class="content">
+            <div class="loading" id="loading">Loading bake data...</div>
+            <div id="bake-content" style="display: none;">
+                <div class="stats" id="stats"></div>
+                <div class="controls">
+                    <button class="btn" onclick="resetZoom()">Reset Zoom</button>
+                    <button class="btn btn-secondary" onclick="zoomToBaking()">Zoom to Baking Phase</button>
+                    <button class="btn btn-secondary" onclick="toggleNotes()">Toggle Notes</button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="tempChart"></canvas>
+                </div>
+                <div class="timeline" id="timeline"></div>
+            </div>
+            <div id="no-data" class="no-data" style="display: none;">
+                <h2>No Bakes Found</h2>
+                <p>Start a new bake to see status here</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chart;
+        let bakeData;
+        let showNotes = true;
+
+        async function loadBake() {
+            try {
+                const response = await fetch('/api/bake/current');
+                bakeData = await response.json();
+
+                if (!bakeData.events || bakeData.events.length === 0) {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('no-data').style.display = 'block';
+                    return;
+                }
+
+                displayBake(bakeData);
+            } catch (error) {
+                console.error('Error loading bake:', error);
+                document.getElementById('loading').innerHTML = 'Error loading bake data';
+            }
+        }
+
+        function displayBake(bake) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('bake-content').style.display = 'block';
+
+            // Update subtitle
+            const startTime = new Date(bake.events[0].timestamp);
+            const isComplete = bake.events[bake.events.length - 1].event === 'loaf-complete';
+            document.getElementById('subtitle').textContent =
+                'Started ' + startTime.toLocaleString() + (isComplete ? ' (Completed)' : ' (In Progress)');
+
+            // Display stats
+            displayStats(bake);
+
+            // Display chart
+            displayChart(bake);
+
+            // Display timeline
+            displayTimeline(bake);
+        }
+
+        function displayStats(bake) {
+            const stats = document.getElementById('stats');
+            const events = bake.events;
+
+            const temps = events.filter(e => e.temp_f || e.dough_temp_f);
+            const avgTemp = temps.length > 0
+                ? temps.reduce((sum, e) => sum + (e.temp_f || e.dough_temp_f || 0), 0) / temps.length
+                : 0;
+
+            const duration = (new Date(events[events.length - 1].timestamp) - new Date(events[0].timestamp)) / (1000 * 60 * 60);
+            const folds = events.filter(e => e.event === 'fold').length;
+            const isComplete = events[events.length - 1].event === 'loaf-complete';
+
+            let statsHTML = '<div class="stat-card"><div class="stat-value">' + events.length + '</div><div class="stat-label">Events</div></div>';
+            statsHTML += '<div class="stat-card"><div class="stat-value">' + duration.toFixed(1) + 'h</div><div class="stat-label">Duration</div></div>';
+            statsHTML += '<div class="stat-card"><div class="stat-value">' + folds + '</div><div class="stat-label">Folds</div></div>';
+            if (avgTemp > 0) {
+                statsHTML += '<div class="stat-card"><div class="stat-value">' + avgTemp.toFixed(1) + '°F</div><div class="stat-label">Avg Temp</div></div>';
+            }
+            if (isComplete && bake.assessment && bake.assessment.score) {
+                statsHTML += '<div class="stat-card"><div class="stat-value">' + bake.assessment.score + '/10</div><div class="stat-label">Score</div></div>';
+            }
+
+            stats.innerHTML = statsHTML;
+        }
+
+        function displayChart(bake) {
+            const ctx = document.getElementById('tempChart');
+
+            // Prepare data points
+            const labels = [];
+            const kitchenTemps = [];
+            const doughTemps = [];
+            const notePoints = [];
+            const eventAnnotations = [];
+
+            bake.events.forEach((event, idx) => {
+                const time = new Date(event.timestamp);
+                labels.push(time);
+
+                // Temperature data
+                kitchenTemps.push(event.temp_f || null);
+                doughTemps.push(event.dough_temp_f || null);
+
+                // Note points for clicking
+                if (event.note) {
+                    notePoints.push({
+                        x: time,
+                        y: event.temp_f || event.dough_temp_f || 70,
+                        note: event.note,
+                        event: event.event
+                    });
+                }
+
+                // Event markers
+                if (['oven-in', 'oven-out', 'shaped', 'mixed', 'fridge-in'].includes(event.event)) {
+                    eventAnnotations.push({
+                        type: 'line',
+                        xMin: time,
+                        xMax: time,
+                        borderColor: event.event === 'oven-in' ? 'rgba(220, 38, 38, 0.5)' : 'rgba(59, 130, 246, 0.5)',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        label: {
+                            display: true,
+                            content: event.event,
+                            position: 'start'
+                        }
+                    });
+                }
+            });
+
+            if (chart) chart.destroy();
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Kitchen Temp (°F)',
+                            data: kitchenTemps,
+                            borderColor: 'rgb(59, 130, 246)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4,
+                            spanGaps: true
+                        },
+                        {
+                            label: 'Dough Temp (°F)',
+                            data: doughTemps,
+                            borderColor: 'rgb(220, 38, 38)',
+                            backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                            tension: 0.4,
+                            spanGaps: true
+                        },
+                        {
+                            label: 'Notes',
+                            data: notePoints,
+                            type: 'scatter',
+                            backgroundColor: 'rgb(251, 191, 36)',
+                            pointRadius: 8,
+                            pointHoverRadius: 12,
+                            showLine: false,
+                            hidden: !showNotes
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'hour',
+                                displayFormats: {
+                                    hour: 'MMM d ha'
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Temperature (°F)'
+                            },
+                            min: 60,
+                            max: 500
+                        }
+                    },
+                    plugins: {
+                        zoom: {
+                            zoom: {
+                                wheel: {
+                                    enabled: true,
+                                },
+                                pinch: {
+                                    enabled: true
+                                },
+                                mode: 'x',
+                            },
+                            pan: {
+                                enabled: true,
+                                mode: 'x',
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    if (context.dataset.label === 'Notes' && context.raw.note) {
+                                        return 'Note: ' + context.raw.note;
+                                    }
+                                    return '';
+                                }
+                            }
+                        }
+                    },
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const element = elements[0];
+                            const datasetIndex = element.datasetIndex;
+                            const index = element.index;
+
+                            if (datasetIndex === 2) { // Notes dataset
+                                const point = notePoints[index];
+                                alert('Note: ' + point.note);
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function displayTimeline(bake) {
+            const timeline = document.getElementById('timeline');
+            let html = '<h2 style="margin-bottom: 20px;">Event Timeline</h2>';
+
+            bake.events.forEach(event => {
+                const time = new Date(event.timestamp);
+                html += '<div class="event-item">';
+                html += '<div class="event-time">' + time.toLocaleString() + '</div>';
+                html += '<div class="event-name">' + event.event + '</div>';
+
+                const details = [];
+                if (event.temp_f) details.push('Kitchen: ' + event.temp_f + '°F');
+                if (event.dough_temp_f) details.push('Dough: ' + event.dough_temp_f + '°F');
+                if (event.fold_count) details.push('Fold #' + event.fold_count);
+
+                if (details.length > 0) {
+                    html += '<div class="event-details">' + details.join(' • ') + '</div>';
+                }
+
+                if (event.note) {
+                    html += '<div class="event-note">📝 ' + event.note + '</div>';
+                }
+
+                html += '</div>';
+            });
+
+            timeline.innerHTML = html;
+        }
+
+        function resetZoom() {
+            if (chart) chart.resetZoom();
+        }
+
+        function zoomToBaking() {
+            if (!bakeData) return;
+
+            const ovenInEvent = bakeData.events.find(e => e.event === 'oven-in');
+            const ovenOutEvent = bakeData.events.find(e => e.event === 'oven-out');
+
+            if (ovenInEvent) {
+                const start = new Date(ovenInEvent.timestamp);
+                const end = ovenOutEvent ? new Date(ovenOutEvent.timestamp) : new Date(start.getTime() + 60*60*1000);
+
+                chart.zoomScale('x', {min: start, max: end}, 'default');
+                chart.options.scales.y.min = 300;
+                chart.options.scales.y.max = 500;
+                chart.update();
+            }
+        }
+
+        function toggleNotes() {
+            showNotes = !showNotes;
+            if (chart) {
+                chart.data.datasets[2].hidden = !showNotes;
+                chart.update();
+            }
+        }
+
+        // Load bake on page load
+        loadBake();
     </script>
 </body>
 </html>`

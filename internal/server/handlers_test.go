@@ -66,7 +66,7 @@ func TestBakeStart(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/bake/start", nil)
 	w := httptest.NewRecorder()
 
-	server.handleBakeStart(w, req)
+	server.handleLoafStart(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", w.Code)
@@ -77,15 +77,15 @@ func TestBakeStart(t *testing.T) {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	if response["status"] != "bake started" {
-		t.Errorf("Expected status 'bake started', got '%s'", response["status"])
+	if response["status"] != "loaf started" {
+		t.Errorf("Expected status 'loaf started', got '%s'", response["status"])
 	}
 
 	// Try to start another bake (should fail)
 	req2 := httptest.NewRequest(http.MethodPost, "/bake/start", nil)
 	w2 := httptest.NewRecorder()
 
-	server.handleBakeStart(w2, req2)
+	server.handleLoafStart(w2, req2)
 
 	if w2.Code != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", w2.Code)
@@ -229,7 +229,7 @@ func TestBakeComplete(t *testing.T) {
 	}
 
 	body, _ := json.Marshal(assessment)
-	req := httptest.NewRequest(http.MethodPost, "/log/bake-complete", bytes.NewBuffer(body))
+	req := httptest.NewRequest(http.MethodPost, "/log/loaf-complete", bytes.NewBuffer(body))
 	w := httptest.NewRecorder()
 
 	server.handleLog(w, req)
@@ -242,7 +242,7 @@ func TestBakeComplete(t *testing.T) {
 	req2 := httptest.NewRequest(http.MethodPost, "/bake/start", nil)
 	w2 := httptest.NewRecorder()
 
-	server.handleBakeStart(w2, req2)
+	server.handleLoafStart(w2, req2)
 
 	if w2.Code != http.StatusOK {
 		t.Errorf("Should be able to start new bake after completion, got status %d", w2.Code)
@@ -357,7 +357,7 @@ func TestMethodNotAllowed(t *testing.T) {
 			case "/health":
 				server.handleHealth(w, req)
 			case "/bake/start":
-				server.handleBakeStart(w, req)
+				server.handleLoafStart(w, req)
 			case "/status":
 				server.handleStatus(w, req)
 			}

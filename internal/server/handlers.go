@@ -33,9 +33,15 @@ func (s *Server) Start() error {
 
 	// Register handlers
 	mux.HandleFunc("/health", s.handleHealth)
-	mux.HandleFunc("/bake/start", s.handleBakeStart)
+	mux.HandleFunc("/loaf/start", s.handleLoafStart)
+	mux.HandleFunc("/bake/start", s.handleLoafStart) // Legacy support
 	mux.HandleFunc("/log/", s.handleLog)
 	mux.HandleFunc("/status", s.handleStatus)
+	mux.HandleFunc("/view/status", s.handleViewStatus)
+	mux.HandleFunc("/view/history", s.handleViewHistory)
+	mux.HandleFunc("/api/bake/current", s.handleAPICurrentBake)
+	mux.HandleFunc("/api/bake/", s.handleAPIBake)
+	mux.HandleFunc("/api/bakes", s.handleAPIBakesList)
 	mux.HandleFunc("/temp", s.handleTempPage)
 	mux.HandleFunc("/notes", s.handleNotesPage)
 	mux.HandleFunc("/complete", s.handleCompletePage)
@@ -70,17 +76,17 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handleBakeStart starts a new bake
-func (s *Server) handleBakeStart(w http.ResponseWriter, r *http.Request) {
+// handleLoafStart starts a new loaf
+func (s *Server) handleLoafStart(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost && r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Check if there's already a bake today
+	// Check if there's already an active loaf
 	hasBake, err := s.storage.HasCurrentBake()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error checking current bake: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error checking current loaf: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -88,10 +94,10 @@ func (s *Server) handleBakeStart(w http.ResponseWriter, r *http.Request) {
 		// Show nice message if accessed from browser
 		if r.Method == http.MethodGet {
 			w.Header().Set("Content-Type", "text/html")
-			w.Write([]byte(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Already Started</title><style>body{font-family:sans-serif;background:#f59e0b;color:white;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;text-align:center;}h1{font-size:48px;margin:0 0 10px 0;}p{font-size:20px;margin:0;}</style></head><body><div><h1>⚠️</h1><h1>Already Started</h1><p>You already started a bake today!</p></div></body></html>`))
+			w.Write([]byte(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Already Started</title><style>body{font-family:sans-serif;background:#f59e0b;color:white;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;text-align:center;}h1{font-size:48px;margin:0 0 10px 0;}p{font-size:20px;margin:0;}</style></head><body><div><h1>⚠️</h1><h1>Already Started</h1><p>You already started a loaf!</p></div></body></html>`))
 			return
 		}
-		http.Error(w, "Bake already started today", http.StatusBadRequest)
+		http.Error(w, "Loaf already started", http.StatusBadRequest)
 		return
 	}
 
@@ -106,20 +112,20 @@ func (s *Server) handleBakeStart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.storage.AppendEvent(event); err != nil {
-		http.Error(w, fmt.Sprintf("Error starting bake: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error starting loaf: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	// Show nice success message if accessed from browser
 	if r.Method == http.MethodGet {
 		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Bake Started</title><style>body{font-family:sans-serif;background:#10b981;color:white;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;text-align:center;}h1{font-size:48px;margin:0 0 10px 0;}p{font-size:20px;margin:0;}</style></head><body><div><h1>✅</h1><h1>Bake Started!</h1><p>Your loaf has been logged</p></div></body></html>`))
+		w.Write([]byte(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Loaf Started</title><style>body{font-family:sans-serif;background:#10b981;color:white;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;text-align:center;}h1{font-size:48px;margin:0 0 10px 0;}p{font-size:20px;margin:0;}</style></head><body><div><h1>✅</h1><h1>Loaf Started!</h1><p>Your loaf has been logged</p></div></body></html>`))
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
-		"status": "bake started",
+		"status": "loaf started",
 	})
 }
 
@@ -201,7 +207,8 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 			models.EventFridgeIn:     true,
 			models.EventFridgeOut:    true,
 			models.EventOvenIn:       true,
-			models.EventBakeComplete: true,
+			models.EventOvenOut:      true,
+			models.EventLoafComplete: true,
 		}
 
 		if !validEvents[eventType] {
@@ -211,8 +218,8 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 
 		event = models.NewEvent(eventType)
 
-		// Handle bake-complete with assessment data (from web UI)
-		if eventType == models.EventBakeComplete && r.Method == http.MethodPost {
+		// Handle loaf-complete with assessment data (from web UI)
+		if eventType == models.EventLoafComplete && r.Method == http.MethodPost {
 			var reqData struct {
 				Assessment models.Assessment `json:"assessment"`
 			}
@@ -332,4 +339,127 @@ func (s *Server) handleQRCodePDF(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/pdf")
 	w.Header().Set("Content-Disposition", "inline; filename=sourdough-qrcodes.pdf")
 	w.Write(pdfData)
+}
+
+// handleViewStatus serves the current/recent bake status page with graphs
+func (s *Server) handleViewStatus(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(statusViewPageHTML))
+}
+
+// handleViewHistory serves the bake history list page
+func (s *Server) handleViewHistory(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(historyViewPageHTML))
+}
+
+// handleAPICurrentBake returns the current or most recent bake as JSON
+func (s *Server) handleAPICurrentBake(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Try to get current bake
+	bake, err := s.storage.ReadCurrentBake()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error reading bake: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// If current bake is empty or completed, get the most recent one
+	if len(bake.Events) == 0 || (len(bake.Events) > 0 && bake.Events[len(bake.Events)-1].Event == models.EventLoafComplete) {
+		dates, err := s.storage.ListBakes()
+		if err == nil && len(dates) > 0 {
+			// Get most recent bake
+			bake, err = s.storage.ReadBake(dates[0])
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Error reading recent bake: %v", err), http.StatusInternalServerError)
+				return
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(bake)
+}
+
+// handleAPIBake returns a specific bake by date/timestamp
+func (s *Server) handleAPIBake(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract date from path: /api/bake/2025-10-07_19-06
+	path := strings.TrimPrefix(r.URL.Path, "/api/bake/")
+	if path == "" {
+		http.Error(w, "Bake date/timestamp required", http.StatusBadRequest)
+		return
+	}
+
+	bake, err := s.storage.ReadBake(path)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error reading bake: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	if len(bake.Events) == 0 {
+		http.Error(w, "Bake not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(bake)
+}
+
+// handleAPIBakesList returns list of all bakes with summary info
+func (s *Server) handleAPIBakesList(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	dates, err := s.storage.ListBakes()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error listing bakes: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	type BakeSummary struct {
+		Date       string              `json:"date"`
+		StartTime  string              `json:"start_time"`
+		EndTime    string              `json:"end_time,omitempty"`
+		EventCount int                 `json:"event_count"`
+		Completed  bool                `json:"completed"`
+		Assessment *models.Assessment  `json:"assessment,omitempty"`
+	}
+
+	summaries := make([]BakeSummary, 0, len(dates))
+
+	for _, date := range dates {
+		bake, err := s.storage.ReadBake(date)
+		if err != nil || len(bake.Events) == 0 {
+			continue
+		}
+
+		summary := BakeSummary{
+			Date:       date,
+			StartTime:  bake.Events[0].Timestamp.Format("2006-01-02 15:04"),
+			EventCount: len(bake.Events),
+			Assessment: bake.Assessment,
+		}
+
+		// Check if completed
+		lastEvent := bake.Events[len(bake.Events)-1]
+		if lastEvent.Event == models.EventLoafComplete {
+			summary.Completed = true
+			summary.EndTime = lastEvent.Timestamp.Format("2006-01-02 15:04")
+		}
+
+		summaries = append(summaries, summary)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(summaries)
 }

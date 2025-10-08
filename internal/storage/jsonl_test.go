@@ -137,7 +137,7 @@ func TestHasCurrentBake(t *testing.T) {
 	}
 
 	// Complete the bake
-	completeEvent := models.NewEvent(models.EventBakeComplete)
+	completeEvent := models.NewEvent(models.EventLoafComplete)
 	if err := store.AppendEvent(completeEvent); err != nil {
 		t.Fatalf("Failed to append complete event: %v", err)
 	}
@@ -177,7 +177,7 @@ func TestMultiDayBake(t *testing.T) {
 	}
 
 	// Complete bake
-	completeEvent := models.NewEvent(models.EventBakeComplete)
+	completeEvent := models.NewEvent(models.EventLoafComplete)
 	if err := store.AppendEvent(completeEvent); err != nil {
 		t.Fatalf("Failed to append complete event: %v", err)
 	}
@@ -285,7 +285,7 @@ func TestIsCompleted(t *testing.T) {
 	}
 
 	// Complete the bake
-	completeEvent := models.NewEvent(models.EventBakeComplete)
+	completeEvent := models.NewEvent(models.EventLoafComplete)
 	store.AppendEvent(completeEvent)
 
 	if !store.isCompleted(filePath) {
@@ -302,7 +302,7 @@ func TestBakeWithAssessment(t *testing.T) {
 	store.AppendEvent(startEvent)
 
 	// Complete with assessment
-	completeEvent := models.NewEvent(models.EventBakeComplete)
+	completeEvent := models.NewEvent(models.EventLoafComplete)
 	completeEvent.Data = map[string]interface{}{
 		"assessment": models.Assessment{
 			ProofLevel:   "good",
