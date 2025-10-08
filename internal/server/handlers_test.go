@@ -29,7 +29,7 @@ func setupTestServer(t *testing.T) (*Server, string) {
 
 	// Create server
 	// Create disabled Ecobee client for tests
-	ecobeeClient := &ecobee.Client{}
+	ecobeeClient := ecobee.New("", "", "")
 	server := New(store, ecobeeClient, "8080")
 	return server, tmpDir
 }
@@ -168,6 +168,8 @@ func TestLogEvents(t *testing.T) {
 		"/log/fridge-in",
 		"/log/fridge-out",
 		"/log/oven-in",
+		"/log/remove-lid",
+		"/log/oven-out",
 	}
 
 	for _, path := range events {

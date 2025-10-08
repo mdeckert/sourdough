@@ -210,6 +210,7 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 			models.EventFridgeIn:     true,
 			models.EventFridgeOut:    true,
 			models.EventOvenIn:       true,
+			models.EventRemoveLid:    true,
 			models.EventOvenOut:      true,
 			models.EventLoafComplete: true,
 		}

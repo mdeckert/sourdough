@@ -23,9 +23,10 @@ func main() {
 		dataDir = "./data"
 	}
 
-	// Ecobee configuration (optional)
-	ecobeeURL := os.Getenv("ECOBEE_URL")
-	ecobeeDevice := os.Getenv("ECOBEE_DEVICE")
+	// Ecobee configuration via Home Assistant (optional)
+	haURL := os.Getenv("HA_URL")
+	haToken := os.Getenv("HA_TOKEN")
+	ecobeeEntity := os.Getenv("ECOBEE_ENTITY")
 
 	// Initialize storage
 	store, err := storage.New(dataDir)
@@ -34,11 +35,11 @@ func main() {
 	}
 
 	// Initialize Ecobee client (can be disabled)
-	ecobeeClient := ecobee.New(ecobeeURL, ecobeeDevice)
+	ecobeeClient := ecobee.New(haURL, haToken, ecobeeEntity)
 	if ecobeeClient.IsEnabled() {
-		log.Printf("Ecobee integration enabled: %s/%s", ecobeeURL, ecobeeDevice)
+		log.Printf("Ecobee integration enabled via Home Assistant: %s", ecobeeEntity)
 	} else {
-		log.Printf("Ecobee integration disabled (set ECOBEE_URL and ECOBEE_DEVICE to enable)")
+		log.Printf("Ecobee integration disabled (set HA_URL, HA_TOKEN, and ECOBEE_ENTITY to enable)")
 	}
 
 	// Create server

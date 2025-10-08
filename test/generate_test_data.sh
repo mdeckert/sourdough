@@ -38,7 +38,8 @@ cat > "$TEST_FILE" << 'EOF'
 {"timestamp":"2025-10-06T10:30:00-07:00","event":"oven-in"}
 {"timestamp":"2025-10-06T10:31:00-07:00","event":"temperature","temp_f":500}
 {"timestamp":"2025-10-06T10:50:00-07:00","event":"temperature","temp_f":450}
-{"timestamp":"2025-10-06T10:50:30-07:00","event":"note","note":"Removed lid, good oven spring visible"}
+{"timestamp":"2025-10-06T10:50:30-07:00","event":"remove-lid"}
+{"timestamp":"2025-10-06T10:50:35-07:00","event":"note","note":"Good oven spring visible"}
 {"timestamp":"2025-10-06T11:00:00-07:00","event":"temperature","dough_temp_f":180}
 {"timestamp":"2025-10-06T11:05:00-07:00","event":"temperature","dough_temp_f":200}
 {"timestamp":"2025-10-06T11:10:00-07:00","event":"temperature","dough_temp_f":208}

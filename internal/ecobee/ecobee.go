@@ -8,27 +8,31 @@ import (
 	"time"
 )
 
-// Client handles fetching temperature from Ecobee via homebridge
+// Client handles fetching temperature from Ecobee via Home Assistant
 type Client struct {
 	baseURL    string
-	deviceName string
+	token      string
+	entityID   string
 	client     *http.Client
 	enabled    bool
 }
 
-// TemperatureResponse represents the homebridge webhook response
-type TemperatureResponse struct {
-	CurrentTemperature float64 `json:"currentTemperature"`
+// HAStateResponse represents the Home Assistant API state response
+type HAStateResponse struct {
+	State string `json:"state"`
 }
 
 // New creates a new Ecobee client
-// If baseURL is empty, client is disabled and will return 0 for all temps
-func New(baseURL, deviceName string) *Client {
-	enabled := baseURL != "" && deviceName != ""
+// baseURL: Home Assistant base URL (e.g., "http://localhost:8123")
+// token: Home Assistant long-lived access token
+// entityID: Ecobee temperature sensor entity ID (e.g., "sensor.my_ecobee_current_temperature")
+func New(baseURL, token, entityID string) *Client {
+	enabled := baseURL != "" && token != "" && entityID != ""
 
 	return &Client{
-		baseURL:    baseURL,
-		deviceName: deviceName,
+		baseURL:  baseURL,
+		token:    token,
+		entityID: entityID,
 		client: &http.Client{
 			Timeout: 5 * time.Second,
 		},
@@ -41,18 +45,25 @@ func (c *Client) IsEnabled() bool {
 	return c.enabled
 }
 
-// GetTemperature fetches the current temperature from Ecobee
+// GetTemperature fetches the current temperature from Ecobee via Home Assistant
 // Returns 0 if disabled or on error (caller should handle gracefully)
 func (c *Client) GetTemperature() (float64, error) {
 	if !c.enabled {
 		return 0, nil
 	}
 
-	// Construct URL - format depends on homebridge plugin
-	// For homebridge-http-webhooks: http://host:port/device/deviceName
-	url := fmt.Sprintf("%s/%s", c.baseURL, c.deviceName)
+	// Construct URL for Home Assistant API
+	url := fmt.Sprintf("%s/api/states/%s", c.baseURL, c.entityID)
 
-	resp, err := c.client.Get(url)
+	// Create request with authorization header
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return 0, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.token))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return 0, fmt.Errorf("failed to fetch temperature: %w", err)
 	}
@@ -67,18 +78,17 @@ func (c *Client) GetTemperature() (float64, error) {
 		return 0, fmt.Errorf("failed to read response: %w", err)
 	}
 
-	var tempResp TemperatureResponse
-	if err := json.Unmarshal(body, &tempResp); err != nil {
+	var stateResp HAStateResponse
+	if err := json.Unmarshal(body, &stateResp); err != nil {
 		return 0, fmt.Errorf("failed to parse response: %w", err)
 	}
 
-	// Convert Celsius to Fahrenheit if needed
-	// Homebridge usually returns Celsius for temperature sensors
-	tempF := celsiusToFahrenheit(tempResp.CurrentTemperature)
+	// Parse temperature from state string
+	var temp float64
+	if _, err := fmt.Sscanf(stateResp.State, "%f", &temp); err != nil {
+		return 0, fmt.Errorf("failed to parse temperature: %w", err)
+	}
 
-	return tempF, nil
-}
-
-func celsiusToFahrenheit(celsius float64) float64 {
-	return (celsius * 9.0 / 5.0) + 32.0
+	// Temperature is already in Fahrenheit from Home Assistant
+	return temp, nil
 }

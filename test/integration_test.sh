@@ -104,7 +104,7 @@ test_duplicate_start() {
 test_log_events() {
     log_test "Log workflow events"
 
-    events=("fed" "levain-ready" "mixed" "fold" "fold" "fold" "fold" "shaped" "fridge-in" "fridge-out" "oven-in")
+    events=("fed" "levain-ready" "mixed" "fold" "fold" "fold" "fold" "shaped" "fridge-in" "fridge-out" "oven-in" "remove-lid" "oven-out")
 
     for event in "${events[@]}"; do
         response=$(curl -s -X POST "$BASE_URL/log/$event")
@@ -289,7 +289,7 @@ echo ""
 echo "Tests covered:"
 echo "  ✓ Health check endpoint"
 echo "  ✓ Bake start (new & duplicate prevention)"
-echo "  ✓ 11 workflow events (fed, levain-ready, mixed, 4 folds, shaped, fridge-in/out, oven-in)"
+echo "  ✓ 13 workflow events (fed, levain-ready, mixed, 4 folds, shaped, fridge-in/out, oven-in, remove-lid, oven-out)"
 echo "  ✓ 7 temperature logs (4 kitchen, 3 dough)"
 echo "  ✓ Note logging"
 echo "  ✓ Fold count auto-increment (1→2→3→4)"
@@ -353,6 +353,11 @@ test_view_pages() {
     # Check that response contains expected data
     if ! echo "$RESPONSE" | grep -q '"event":"oven-in"'; then
         log_fail "API response missing oven-in event"
+        return
+    fi
+
+    if ! echo "$RESPONSE" | grep -q '"event":"remove-lid"'; then
+        log_fail "API response missing remove-lid event"
         return
     fi
 

@@ -71,7 +71,16 @@ cat > ~/.homebridge/config.json << 'EOF'
 EOF
 
 echo ""
+echo "Detecting Node.js paths..."
+NODE_PATH=$(which node)
+HOMEBRIDGE_PATH=$(which homebridge)
+echo "  Node: $NODE_PATH"
+echo "  Homebridge: $HOMEBRIDGE_PATH"
+
+echo ""
 echo "Creating systemd service..."
+# Get the directory containing node
+NODE_DIR=$(dirname "$NODE_PATH")
 sudo tee /etc/systemd/system/homebridge.service > /dev/null << EOF
 [Unit]
 Description=Homebridge
@@ -80,7 +89,8 @@ After=network-online.target
 [Service]
 Type=simple
 User=$USER
-ExecStart=/usr/bin/homebridge -I
+Environment="PATH=$NODE_DIR:/usr/local/bin:/usr/bin:/bin"
+ExecStart=$NODE_PATH $HOMEBRIDGE_PATH -I
 Restart=on-failure
 RestartSec=10
 KillMode=process

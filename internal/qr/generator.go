@@ -42,6 +42,7 @@ func GenerateAll(serverURL, outputDir string) error {
 		{"shaped", "Shaped", fmt.Sprintf("%s/log/shaped", serverURL)},
 		{"fridge-in", "Fridge In", fmt.Sprintf("%s/log/fridge-in", serverURL)},
 		{"oven-in", "Oven In", fmt.Sprintf("%s/log/oven-in", serverURL)},
+		{"remove-lid", "Remove Lid", fmt.Sprintf("%s/log/remove-lid", serverURL)},
 		{"oven-out", "Oven Out", fmt.Sprintf("%s/log/oven-out", serverURL)},
 		{"temp", "LOG TEMP", fmt.Sprintf("%s/temp", serverURL)},
 		{"notes", "ADD NOTE", fmt.Sprintf("%s/notes", serverURL)},

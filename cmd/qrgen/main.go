@@ -17,6 +17,21 @@ func main() {
 	serverURL := os.Args[1]
 	outputDir := "./qrcodes"
 
+	// Validate URL
+	if serverURL == "--help" || serverURL == "-h" {
+		fmt.Println("Usage: qrgen <server-url>")
+		fmt.Println("Example: qrgen http://192.168.1.100:8080")
+		os.Exit(0)
+	}
+
+	// Check for invalid URLs
+	if serverURL == "localhost" || serverURL == "http://localhost" || serverURL == "http://localhost:8080" {
+		fmt.Println("Error: Cannot use localhost URLs for QR codes")
+		fmt.Println("QR codes must use the server's IP address so they work from your phone")
+		fmt.Println("Example: qrgen http://192.168.1.50:8080")
+		os.Exit(1)
+	}
+
 	fmt.Printf("Generating QR codes for server: %s\n", serverURL)
 	fmt.Printf("Output directory: %s\n\n", outputDir)
 

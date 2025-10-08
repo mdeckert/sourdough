@@ -15,6 +15,7 @@ const (
 	EventFridgeIn      EventType = "fridge-in"
 	EventFridgeOut     EventType = "fridge-out"
 	EventOvenIn        EventType = "oven-in"
+	EventRemoveLid     EventType = "remove-lid"
 	EventOvenOut       EventType = "oven-out"
 	EventLoafComplete  EventType = "loaf-complete"
 	EventTemperature   EventType = "temperature"

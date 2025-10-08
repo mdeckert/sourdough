@@ -82,7 +82,12 @@ test-ui:
 	@echo "Testing UI elements..."
 	@./test/test_ui.sh
 
-# Run all tests (unit + integration + UI)
+# Test QR code generation
+test-qr:
+	@echo "Testing QR code generation..."
+	@./test/test_qr.sh
+
+# Run all tests (unit + integration + UI + QR)
 test-all: test
 	@echo ""
 	@echo "Running integration tests..."
@@ -90,6 +95,9 @@ test-all: test
 	@echo ""
 	@echo "Running UI tests..."
 	@./test/test_ui.sh
+	@echo ""
+	@echo "Running QR code tests..."
+	@./test/test_qr.sh
 
 # Download dependencies
 deps:
@@ -114,5 +122,6 @@ help:
 	@echo "  make test-data        - Generate test dataset"
 	@echo "  make test-integration - Run integration tests"
 	@echo "  make test-ui          - Test UI elements"
-	@echo "  make test-all         - Run all tests (unit + integration + UI)"
+	@echo "  make test-qr          - Test QR code generation"
+	@echo "  make test-all         - Run all tests (unit + integration + UI + QR)"
 	@echo "  make deps             - Download dependencies"
