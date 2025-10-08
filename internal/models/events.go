@@ -30,6 +30,7 @@ type Event struct {
 	DoughTempF  *float64               `json:"dough_temp_f,omitempty"`
 	FoldCount   *int                   `json:"fold_count,omitempty"`
 	Note        string                 `json:"note,omitempty"`
+	Image       string                 `json:"image,omitempty"`       // Image filename (stored in data/images/BAKE_DATE/)
 	Data        map[string]interface{} `json:"data,omitempty"`
 }
 
@@ -97,5 +98,11 @@ func (e *Event) WithFoldCount(count int) *Event {
 // WithNote adds a note to an event
 func (e *Event) WithNote(note string) *Event {
 	e.Note = note
+	return e
+}
+
+// WithImage adds an image filename to an event
+func (e *Event) WithImage(imageFilename string) *Event {
+	e.Image = imageFilename
 	return e
 }

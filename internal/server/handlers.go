@@ -50,6 +50,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/notes", s.handleNotesPage)
 	mux.HandleFunc("/complete", s.handleCompletePage)
 	mux.HandleFunc("/qrcodes.pdf", s.handleQRCodePDF)
+	mux.HandleFunc("/images/", s.handleImage)
 
 	// Start automatic temperature logging if Ecobee is enabled
 	if s.ecobee.IsEnabled() {
@@ -202,29 +203,73 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 
 	var event *models.Event
 
-	// Handle note logging: /log/note (expects JSON body)
+	// Handle note logging: /log/note (expects multipart form or JSON body)
 	if parts[0] == "note" {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 
-		var noteData struct {
-			Note string `json:"note"`
-		}
+		var noteText string
+		var imageFilename string
 
-		if err := json.NewDecoder(r.Body).Decode(&noteData); err != nil {
-			http.Error(w, "Invalid JSON body", http.StatusBadRequest)
-			return
-		}
+		// Check if this is multipart form data (with possible image)
+		contentType := r.Header.Get("Content-Type")
+		if strings.HasPrefix(contentType, "multipart/form-data") {
+			// Parse multipart form (max 10MB)
+			if err := r.ParseMultipartForm(10 << 20); err != nil {
+				http.Error(w, "Failed to parse form data", http.StatusBadRequest)
+				return
+			}
 
-		if noteData.Note == "" {
-			http.Error(w, "Note cannot be empty", http.StatusBadRequest)
-			return
+			noteText = r.FormValue("note")
+			if noteText == "" {
+				http.Error(w, "Note cannot be empty", http.StatusBadRequest)
+				return
+			}
+
+			// Handle image upload if present
+			file, header, err := r.FormFile("image")
+			if err == nil {
+				defer file.Close()
+
+				// Validate image type
+				if !strings.HasPrefix(header.Header.Get("Content-Type"), "image/") {
+					http.Error(w, "Invalid image type", http.StatusBadRequest)
+					return
+				}
+
+				// Save image with timestamp-based filename
+				imageFilename = fmt.Sprintf("%d.jpg", time.Now().UnixMilli())
+				if err := s.storage.SaveImage(imageFilename, file); err != nil {
+					http.Error(w, fmt.Sprintf("Failed to save image: %v", err), http.StatusInternalServerError)
+					return
+				}
+			}
+		} else {
+			// JSON body (backward compatibility)
+			var noteData struct {
+				Note string `json:"note"`
+			}
+
+			if err := json.NewDecoder(r.Body).Decode(&noteData); err != nil {
+				http.Error(w, "Invalid JSON body", http.StatusBadRequest)
+				return
+			}
+
+			if noteData.Note == "" {
+				http.Error(w, "Note cannot be empty", http.StatusBadRequest)
+				return
+			}
+
+			noteText = noteData.Note
 		}
 
 		event = models.NewEvent(models.EventNote)
-		event.WithNote(noteData.Note)
+		event.WithNote(noteText)
+		if imageFilename != "" {
+			event.WithImage(imageFilename)
+		}
 	} else if parts[0] == "temp" {
 		// Handle temperature logging: /log/temp/76
 		if len(parts) < 2 {
@@ -547,4 +592,40 @@ func (s *Server) handleAPIBakesList(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(summaries)
+}
+
+// handleImage serves image files for bakes
+// URL format: /images/bake_YYYY-MM-DD_HH-MM/filename.jpg
+func (s *Server) handleImage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse path: /images/bake_2025-10-07_19-13-49/1696721234567.jpg
+	path := strings.TrimPrefix(r.URL.Path, "/images/")
+	parts := strings.SplitN(path, "/", 2)
+
+	if len(parts) != 2 {
+		http.Error(w, "Invalid image path", http.StatusBadRequest)
+		return
+	}
+
+	bakeName := parts[0]
+	filename := parts[1]
+
+	// Extract date from bake name (remove "bake_" prefix)
+	bakeDate := strings.TrimPrefix(bakeName, "bake_")
+
+	// Get image path from storage
+	imagePath := s.storage.GetImagePath(bakeDate, filename)
+
+	// Check if file exists
+	if _, err := os.Stat(imagePath); os.IsNotExist(err) {
+		http.Error(w, "Image not found", http.StatusNotFound)
+		return
+	}
+
+	// Serve the file
+	http.ServeFile(w, r, imagePath)
 }

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -381,4 +382,40 @@ func (s *Storage) DeleteBake(date string) error {
 	}
 
 	return nil
+}
+
+// SaveImage saves an uploaded image file for the current bake
+func (s *Storage) SaveImage(filename string, data io.Reader) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Get current bake date from filename
+	bakeFile := s.getCurrentBakeFile()
+	bakeName := strings.TrimSuffix(filepath.Base(bakeFile), ".jsonl")
+
+	// Create images directory for this bake
+	imageDir := filepath.Join(s.dataDir, "images", bakeName)
+	if err := os.MkdirAll(imageDir, 0755); err != nil {
+		return fmt.Errorf("failed to create image directory: %w", err)
+	}
+
+	// Save image file
+	imagePath := filepath.Join(imageDir, filename)
+	outFile, err := os.Create(imagePath)
+	if err != nil {
+		return fmt.Errorf("failed to create image file: %w", err)
+	}
+	defer outFile.Close()
+
+	if _, err := io.Copy(outFile, data); err != nil {
+		return fmt.Errorf("failed to write image data: %w", err)
+	}
+
+	return nil
+}
+
+// GetImagePath returns the full path to an image file for a given bake
+func (s *Storage) GetImagePath(bakeDate, filename string) string {
+	bakeName := fmt.Sprintf("bake_%s", bakeDate)
+	return filepath.Join(s.dataDir, "images", bakeName, filename)
 }

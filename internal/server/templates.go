@@ -366,6 +366,47 @@ const notesPageHTML = `<!DOCTYPE html>
             font-size: 12px;
             margin-top: 5px;
         }
+        .image-upload {
+            margin-top: 15px;
+        }
+        .image-upload-btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #3b82f6;
+            color: white;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+            border: none;
+        }
+        .image-upload-btn:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+        }
+        .image-preview {
+            margin-top: 15px;
+            display: none;
+        }
+        .image-preview img {
+            max-width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .image-preview-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        .remove-image-btn {
+            padding: 8px 16px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -398,12 +439,27 @@ const notesPageHTML = `<!DOCTYPE html>
             <div class="char-count"><span id="count">0</span> characters</div>
         </div>
 
+        <div class="input-group image-upload">
+            <label>📷 Add Photo (optional)</label>
+            <input type="file" id="imageInput" accept="image/*" capture="environment" style="display: none" onchange="handleImageSelect(event)">
+            <button class="image-upload-btn" onclick="document.getElementById('imageInput').click()">
+                Take Photo / Choose Image
+            </button>
+            <div id="imagePreview" class="image-preview">
+                <img id="previewImg" src="" alt="Preview">
+                <div class="image-preview-actions">
+                    <button class="remove-image-btn" onclick="removeImage()">Remove Image</button>
+                </div>
+            </div>
+        </div>
+
         <button onclick="addNote()">Add Note</button>
     </div>
 
     <script>
         const textarea = document.getElementById('note');
         const countEl = document.getElementById('count');
+        let selectedImage = null;
 
         textarea.addEventListener('input', function() {
             countEl.textContent = this.value.length;
@@ -420,6 +476,39 @@ const notesPageHTML = `<!DOCTYPE html>
             textarea.focus();
         }
 
+        function handleImageSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                showError('Please select an image file');
+                return;
+            }
+
+            // Validate file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showError('Image too large (max 5MB)');
+                return;
+            }
+
+            selectedImage = file;
+
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('previewImg').src = e.target.result;
+                document.getElementById('imagePreview').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeImage() {
+            selectedImage = null;
+            document.getElementById('imageInput').value = '';
+            document.getElementById('imagePreview').style.display = 'none';
+        }
+
         async function addNote() {
             const note = document.getElementById('note').value.trim();
 
@@ -428,21 +517,28 @@ const notesPageHTML = `<!DOCTYPE html>
                 return;
             }
 
-            const button = document.querySelector('button');
+            const button = document.querySelector('button[onclick="addNote()"]');
             button.disabled = true;
             button.textContent = 'Adding...';
 
             try {
+                // Use FormData to send both note and image
+                const formData = new FormData();
+                formData.append('note', note);
+                if (selectedImage) {
+                    formData.append('image', selectedImage);
+                }
+
                 const response = await fetch('/log/note', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ note: note })
+                    body: formData
                 });
 
                 if (response.ok) {
                     showSuccess('Note added successfully!');
                     document.getElementById('note').value = '';
                     countEl.textContent = '0';
+                    removeImage();
 
                     setTimeout(() => {
                         button.disabled = false;
@@ -1180,6 +1276,52 @@ const statusViewPageHTML = `<!DOCTYPE html>
             margin-top: 8px;
             font-style: italic;
         }
+        .event-image {
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        .event-image img {
+            max-width: 200px;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .event-image img:hover {
+            transform: scale(1.05);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+        }
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .modal-close:hover {
+            color: #bbb;
+        }
         .controls {
             margin-bottom: 20px;
             display: flex;
@@ -1248,6 +1390,12 @@ const statusViewPageHTML = `<!DOCTYPE html>
                 <p>Start a new bake to see status here</p>
             </div>
         </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="modal" onclick="closeModal()">
+        <span class="modal-close">&times;</span>
+        <img class="modal-content" id="modalImage">
     </div>
 
     <script>
@@ -1540,11 +1688,38 @@ const statusViewPageHTML = `<!DOCTYPE html>
                     html += '<div class="event-note">📝 ' + event.note + '</div>';
                 }
 
+                // Display image thumbnail if present
+                if (event.image) {
+                    const imageUrl = '/images/' + bake.date + '/' + event.image;
+                    html += '<div class="event-image" onclick="openModal(\'' + imageUrl + '\')">';
+                    html += '<img src="' + imageUrl + '" alt="Event photo" title="Click to enlarge">';
+                    html += '</div>';
+                }
+
                 html += '</div>';
             });
 
             timeline.innerHTML = html;
         }
+
+        function openModal(imageUrl) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            modalImg.src = imageUrl;
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('imageModal');
+            modal.classList.remove('active');
+        }
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeModal();
+            }
+        });
 
         function resetZoom() {
             if (chart) {
