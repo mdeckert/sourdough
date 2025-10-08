@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/mdeckert/sourdough/internal/ecobee"
 	"github.com/mdeckert/sourdough/internal/models"
 	"github.com/mdeckert/sourdough/internal/storage"
 )
@@ -16,13 +17,15 @@ import (
 // Server handles HTTP requests
 type Server struct {
 	storage *storage.Storage
+	ecobee  *ecobee.Client
 	port    string
 }
 
 // New creates a new Server instance
-func New(storage *storage.Storage, port string) *Server {
+func New(storage *storage.Storage, ecobeeClient *ecobee.Client, port string) *Server {
 	return &Server{
 		storage: storage,
+		ecobee:  ecobeeClient,
 		port:    port,
 	}
 }
@@ -258,6 +261,17 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 		// Check for note
 		if note := r.URL.Query().Get("note"); note != "" {
 			event.WithNote(note)
+		}
+	}
+
+	// Auto-fetch kitchen temp from Ecobee if enabled and no temp already set
+	// Only fetch for non-temperature events to avoid overwriting manual temps
+	if s.ecobee.IsEnabled() && event.Event != models.EventTemperature && event.TempF == nil {
+		if temp, err := s.ecobee.GetTemperature(); err == nil && temp > 0 {
+			event.WithTemp(temp)
+			log.Printf("Auto-fetched kitchen temp from Ecobee: %.1f°F", temp)
+		} else if err != nil {
+			log.Printf("Warning: Failed to fetch Ecobee temp: %v", err)
 		}
 	}
 

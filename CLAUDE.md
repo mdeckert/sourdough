@@ -9,6 +9,12 @@ This is a sourdough bread logging system that tracks the entire baking process f
 - QR codes must use the server IP to work on mobile devices
 - Localhost/127.0.0.1 are only for local testing on the server itself
 
+**Optional - Ecobee Integration**:
+- Automatically fetches kitchen temperature from Ecobee thermostat
+- Requires homebridge setup (see [ECOBEE_SETUP.md](ECOBEE_SETUP.md))
+- When enabled, every event automatically includes ambient temperature
+- Configuration via environment variables: `ECOBEE_URL` and `ECOBEE_DEVICE`
+
 ## Architecture
 
 ### Core Components

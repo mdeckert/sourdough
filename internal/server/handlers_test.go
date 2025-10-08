@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/mdeckert/sourdough/internal/ecobee"
 	"github.com/mdeckert/sourdough/internal/storage"
 )
 
@@ -27,7 +28,9 @@ func setupTestServer(t *testing.T) (*Server, string) {
 	}
 
 	// Create server
-	server := New(store, "8080")
+	// Create disabled Ecobee client for tests
+	ecobeeClient := &ecobee.Client{}
+	server := New(store, ecobeeClient, "8080")
 	return server, tmpDir
 }
 

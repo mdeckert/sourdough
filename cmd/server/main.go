@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/mdeckert/sourdough/internal/ecobee"
 	"github.com/mdeckert/sourdough/internal/server"
 	"github.com/mdeckert/sourdough/internal/storage"
 )
@@ -22,14 +23,26 @@ func main() {
 		dataDir = "./data"
 	}
 
+	// Ecobee configuration (optional)
+	ecobeeURL := os.Getenv("ECOBEE_URL")
+	ecobeeDevice := os.Getenv("ECOBEE_DEVICE")
+
 	// Initialize storage
 	store, err := storage.New(dataDir)
 	if err != nil {
 		log.Fatalf("Failed to initialize storage: %v", err)
 	}
 
+	// Initialize Ecobee client (can be disabled)
+	ecobeeClient := ecobee.New(ecobeeURL, ecobeeDevice)
+	if ecobeeClient.IsEnabled() {
+		log.Printf("Ecobee integration enabled: %s/%s", ecobeeURL, ecobeeDevice)
+	} else {
+		log.Printf("Ecobee integration disabled (set ECOBEE_URL and ECOBEE_DEVICE to enable)")
+	}
+
 	// Create server
-	srv := server.New(store, port)
+	srv := server.New(store, ecobeeClient, port)
 
 	// Handle graceful shutdown
 	go func() {
