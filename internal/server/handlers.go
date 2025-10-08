@@ -39,6 +39,8 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/health", s.handleHealth)
 	mux.HandleFunc("/loaf/start", s.handleLoafStart)
 	mux.HandleFunc("/bake/start", s.handleLoafStart) // Legacy support
+	mux.HandleFunc("/log/oven-in", s.handleOvenInLog) // Must be before /log/
+	mux.HandleFunc("/log/remove-lid", s.handleRemoveLidLog) // Must be before /log/
 	mux.HandleFunc("/log/", s.handleLog)
 	mux.HandleFunc("/status", s.handleStatus)
 	mux.HandleFunc("/view/status", s.handleViewStatus)
@@ -248,6 +250,7 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 
 		var noteText string
 		var imageFilename string
+		var doughTemp *float64
 
 		// Check if this is multipart form data (with possible image)
 		contentType := r.Header.Get("Content-Type")
@@ -259,6 +262,13 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 			}
 
 			noteText = r.FormValue("note")
+
+			// Handle optional dough temperature
+			if doughTempStr := r.FormValue("dough_temp"); doughTempStr != "" {
+				if temp, err := strconv.ParseFloat(doughTempStr, 64); err == nil {
+					doughTemp = &temp
+				}
+			}
 
 			// Handle image upload if present
 			file, header, err := r.FormFile("image")
@@ -307,6 +317,9 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 		event.WithNote(noteText)
 		if imageFilename != "" {
 			event.WithImage(imageFilename)
+		}
+		if doughTemp != nil {
+			event.WithDoughTemp(*doughTemp)
 		}
 	} else if parts[0] == "temp" {
 		// Handle temperature logging: /log/temp/76
@@ -471,6 +484,128 @@ func (s *Server) handleNotesPage(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleCompletePage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	w.Write([]byte(completePageHTML))
+}
+
+// handleOvenInPage serves the oven-in temperature selection web UI
+func (s *Server) handleOvenInPage(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(ovenInPageHTML))
+}
+
+// handleRemoveLidPage serves the remove-lid temperature selection web UI
+func (s *Server) handleRemoveLidPage(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(removeLidPageHTML))
+}
+
+// handleOvenInLog handles oven-in event logging with temperature selection
+func (s *Server) handleOvenInLog(w http.ResponseWriter, r *http.Request) {
+	// GET request: show the UI page
+	if r.Method == http.MethodGet {
+		s.handleOvenInPage(w, r)
+		return
+	}
+
+	// POST request: log the event with temperature
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Get temp from query parameter
+	tempStr := r.URL.Query().Get("temp")
+	if tempStr == "" {
+		http.Error(w, "Missing temp parameter", http.StatusBadRequest)
+		return
+	}
+
+	temp, err := strconv.ParseFloat(tempStr, 64)
+	if err != nil || temp < 0 || temp > 600 {
+		http.Error(w, "Invalid temperature", http.StatusBadRequest)
+		return
+	}
+
+	// Check if there's an active bake
+	hasBake, err := s.storage.HasCurrentBake()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error checking current bake: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if !hasBake {
+		http.Error(w, "No active bake. Start a new loaf first", http.StatusBadRequest)
+		return
+	}
+
+	// Create event with oven temperature
+	event := models.NewEvent(models.EventOvenIn).WithTemp(temp)
+
+	// Append event to current bake
+	if err := s.storage.AppendEvent(event); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to log event: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "success",
+		"event":  event,
+	})
+}
+
+// handleRemoveLidLog handles remove-lid event logging with temperature selection
+func (s *Server) handleRemoveLidLog(w http.ResponseWriter, r *http.Request) {
+	// GET request: show the UI page
+	if r.Method == http.MethodGet {
+		s.handleRemoveLidPage(w, r)
+		return
+	}
+
+	// POST request: log the event with temperature
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Get temp from query parameter
+	tempStr := r.URL.Query().Get("temp")
+	if tempStr == "" {
+		http.Error(w, "Missing temp parameter", http.StatusBadRequest)
+		return
+	}
+
+	temp, err := strconv.ParseFloat(tempStr, 64)
+	if err != nil || temp < 0 || temp > 600 {
+		http.Error(w, "Invalid temperature", http.StatusBadRequest)
+		return
+	}
+
+	// Check if there's an active bake
+	hasBake, err := s.storage.HasCurrentBake()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error checking current bake: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if !hasBake {
+		http.Error(w, "No active bake. Start a new loaf first", http.StatusBadRequest)
+		return
+	}
+
+	// Create event with oven temperature
+	event := models.NewEvent(models.EventRemoveLid).WithTemp(temp)
+
+	// Append event to current bake
+	if err := s.storage.AppendEvent(event); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to log event: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "success",
+		"event":  event,
+	})
 }
 
 // handleQRCodePDF serves the QR codes PDF file

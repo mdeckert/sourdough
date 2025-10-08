@@ -418,24 +418,24 @@ const notesPageHTML = `<!DOCTYPE html>
         <div id="error" class="error"></div>
 
         <div class="input-group">
-            <label>Quick Phrases</label>
+            <label>Dough Feel</label>
             <div class="quick-notes">
-                <div class="quick-note" onclick="appendNote('Good oven spring')">Good oven spring</div>
-                <div class="quick-note" onclick="appendNote('Underproofed')">Underproofed</div>
-                <div class="quick-note" onclick="appendNote('Overproofed')">Overproofed</div>
-                <div class="quick-note" onclick="appendNote('Dense crumb')">Dense crumb</div>
-                <div class="quick-note" onclick="appendNote('Open crumb')">Open crumb</div>
-                <div class="quick-note" onclick="appendNote('Great flavor')">Great flavor</div>
-                <div class="quick-note" onclick="appendNote('Too sour')">Too sour</div>
-                <div class="quick-note" onclick="appendNote('Not sour enough')">Not sour enough</div>
-                <div class="quick-note" onclick="appendNote('Crust too dark')">Crust too dark</div>
-                <div class="quick-note" onclick="appendNote('Perfect crust')">Perfect crust</div>
+                <div class="quick-note" onclick="appendNote('Sticky')">Sticky</div>
+                <div class="quick-note" onclick="appendNote('Slack')">Slack</div>
+                <div class="quick-note" onclick="appendNote('Tight')">Tight</div>
+                <div class="quick-note" onclick="appendNote('Jiggly')">Jiggly</div>
+                <div class="quick-note" onclick="appendNote('Smooth')">Smooth</div>
             </div>
         </div>
 
         <div class="input-group">
+            <label for="doughTemp">Dough Temperature (optional)</label>
+            <input type="number" id="doughTemp" placeholder="e.g., 76" step="1" style="width: 100%; padding: 16px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 18px; text-align: center;">
+        </div>
+
+        <div class="input-group">
             <label for="note">Your Note</label>
-            <textarea id="note" placeholder="Enter observations, tasting notes, crumb analysis, etc..." autofocus></textarea>
+            <textarea id="note" placeholder="Enter observations about dough, levain, proofing progress..." autofocus></textarea>
             <div class="char-count"><span id="count">0</span> characters</div>
         </div>
 
@@ -553,6 +553,7 @@ const notesPageHTML = `<!DOCTYPE html>
 
         async function addNote() {
             const note = document.getElementById('note').value.trim();
+            const doughTemp = document.getElementById('doughTemp').value.trim();
 
             if (!note && !selectedImage) {
                 showError('Please enter a note or attach an image');
@@ -564,9 +565,12 @@ const notesPageHTML = `<!DOCTYPE html>
             button.textContent = 'Adding...';
 
             try {
-                // Use FormData to send both note and image
+                // Use FormData to send note, dough temp, and image
                 const formData = new FormData();
                 formData.append('note', note);
+                if (doughTemp) {
+                    formData.append('dough_temp', doughTemp);
+                }
                 if (selectedImage) {
                     formData.append('image', selectedImage);
                 }
@@ -579,6 +583,7 @@ const notesPageHTML = `<!DOCTYPE html>
                 if (response.ok) {
                     showSuccess('Note added successfully!');
                     document.getElementById('note').value = '';
+                    document.getElementById('doughTemp').value = '';
                     countEl.textContent = '0';
                     removeImage();
 
@@ -922,6 +927,216 @@ const tempPageHTML = `<!DOCTYPE html>
             el.textContent = message;
             el.style.display = 'block';
             document.getElementById('success').style.display = 'none';
+        }
+    </script>
+</body>
+</html>`
+
+const ovenInPageHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oven In</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 100%;
+        }
+        h1 { color: #333; margin-bottom: 10px; font-size: 28px; text-align: center; }
+        .subtitle { color: #666; text-align: center; margin-bottom: 30px; font-size: 14px; }
+        .temp-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .temp-btn {
+            padding: 20px 10px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .temp-btn:hover {
+            border-color: #f5576c;
+            background: #fff5f7;
+            transform: translateY(-2px);
+        }
+        .temp-btn:active { transform: translateY(0); }
+        .success, .error {
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .success { background: #10b981; color: white; }
+        .error { background: #ef4444; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔥 Oven In</h1>
+        <p class="subtitle">Select Oven Temperature</p>
+        <div id="success" class="success"></div>
+        <div id="error" class="error"></div>
+        <div class="temp-grid">
+            <button class="temp-btn" onclick="logOvenIn(420)">420°F</button>
+            <button class="temp-btn" onclick="logOvenIn(425)">425°F</button>
+            <button class="temp-btn" onclick="logOvenIn(430)">430°F</button>
+            <button class="temp-btn" onclick="logOvenIn(435)">435°F</button>
+            <button class="temp-btn" onclick="logOvenIn(440)">440°F</button>
+            <button class="temp-btn" onclick="logOvenIn(445)">445°F</button>
+            <button class="temp-btn" onclick="logOvenIn(450)">450°F</button>
+            <button class="temp-btn" onclick="logOvenIn(455)">455°F</button>
+            <button class="temp-btn" onclick="logOvenIn(460)">460°F</button>
+            <button class="temp-btn" onclick="logOvenIn(465)">465°F</button>
+            <button class="temp-btn" onclick="logOvenIn(470)">470°F</button>
+            <button class="temp-btn" onclick="logOvenIn(475)">475°F</button>
+            <button class="temp-btn" onclick="logOvenIn(480)">480°F</button>
+        </div>
+    </div>
+    <script>
+        async function logOvenIn(temp) {
+            try {
+                const response = await fetch('/log/oven-in?temp=' + temp, { method: 'POST' });
+                if (response.ok) {
+                    document.getElementById('success').textContent = 'Oven In logged at ' + temp + '°F!';
+                    document.getElementById('success').style.display = 'block';
+                    setTimeout(() => { document.getElementById('success').style.display = 'none'; }, 3000);
+                } else {
+                    const text = await response.text();
+                    document.getElementById('error').textContent = 'Error: ' + text;
+                    document.getElementById('error').style.display = 'block';
+                }
+            } catch (error) {
+                document.getElementById('error').textContent = 'Network error: ' + error.message;
+                document.getElementById('error').style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>`
+
+const removeLidPageHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remove Lid</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 100%;
+        }
+        h1 { color: #333; margin-bottom: 10px; font-size: 28px; text-align: center; }
+        .subtitle { color: #666; text-align: center; margin-bottom: 30px; font-size: 14px; }
+        .temp-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .temp-btn {
+            padding: 20px 10px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .temp-btn:hover {
+            border-color: #f5576c;
+            background: #fff5f7;
+            transform: translateY(-2px);
+        }
+        .temp-btn:active { transform: translateY(0); }
+        .success, .error {
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .success { background: #10b981; color: white; }
+        .error { background: #ef4444; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌡️ Remove Lid</h1>
+        <p class="subtitle">Select Oven Temperature</p>
+        <div id="success" class="success"></div>
+        <div id="error" class="error"></div>
+        <div class="temp-grid">
+            <button class="temp-btn" onclick="logRemoveLid(420)">420°F</button>
+            <button class="temp-btn" onclick="logRemoveLid(425)">425°F</button>
+            <button class="temp-btn" onclick="logRemoveLid(430)">430°F</button>
+            <button class="temp-btn" onclick="logRemoveLid(435)">435°F</button>
+            <button class="temp-btn" onclick="logRemoveLid(440)">440°F</button>
+            <button class="temp-btn" onclick="logRemoveLid(445)">445°F</button>
+            <button class="temp-btn" onclick="logRemoveLid(450)">450°F</button>
+            <button class="temp-btn" onclick="logRemoveLid(455)">455°F</button>
+            <button class="temp-btn" onclick="logRemoveLid(460)">460°F</button>
+            <button class="temp-btn" onclick="logRemoveLid(465)">465°F</button>
+            <button class="temp-btn" onclick="logRemoveLid(470)">470°F</button>
+            <button class="temp-btn" onclick="logRemoveLid(475)">475°F</button>
+            <button class="temp-btn" onclick="logRemoveLid(480)">480°F</button>
+        </div>
+    </div>
+    <script>
+        async function logRemoveLid(temp) {
+            try {
+                const response = await fetch('/log/remove-lid?temp=' + temp, { method: 'POST' });
+                if (response.ok) {
+                    document.getElementById('success').textContent = 'Remove Lid logged at ' + temp + '°F!';
+                    document.getElementById('success').style.display = 'block';
+                    setTimeout(() => { document.getElementById('success').style.display = 'none'; }, 3000);
+                } else {
+                    const text = await response.text();
+                    document.getElementById('error').textContent = 'Error: ' + text;
+                    document.getElementById('error').style.display = 'block';
+                }
+            } catch (error) {
+                document.getElementById('error').textContent = 'Network error: ' + error.message;
+                document.getElementById('error').style.display = 'block';
+            }
         }
     </script>
 </body>
@@ -1612,14 +1827,36 @@ const statusViewPageHTML = `<!DOCTYPE html>
             const bakeLoaf = [];
             const bakeNotes = [];
 
+            // Stage events that should have labels
+            const stageEvents = ['starter-out', 'fed', 'levain-ready', 'mixed', 'fold', 'shaped',
+                                 'fridge-in', 'fridge-out', 'oven-in', 'remove-lid', 'oven-out'];
+
             bake.events.forEach((event, idx) => {
                 const time = new Date(event.timestamp);
+                const isStage = stageEvents.includes(event.event);
 
                 if (ovenInIdx < 0 || idx < ovenInIdx) {
                     // Before oven-in: fermentation phase
                     fermentLabels.push(time);
-                    fermentKitchen.push(event.temp_f || null);
-                    fermentDough.push(event.dough_temp_f || null);
+                    // Store event name with temp for stage events
+                    if (event.temp_f) {
+                        fermentKitchen.push({
+                            x: time,
+                            y: event.temp_f,
+                            stage: isStage ? event.event : null
+                        });
+                    } else {
+                        fermentKitchen.push(null);
+                    }
+                    if (event.dough_temp_f) {
+                        fermentDough.push({
+                            x: time,
+                            y: event.dough_temp_f,
+                            stage: isStage ? event.event : null
+                        });
+                    } else {
+                        fermentDough.push(null);
+                    }
                     if (event.note) {
                         fermentNotes.push({
                             x: time,
@@ -1630,8 +1867,25 @@ const statusViewPageHTML = `<!DOCTYPE html>
                 } else {
                     // From oven-in onwards: baking phase
                     bakeLabels.push(time);
-                    bakeOven.push(event.temp_f || null);
-                    bakeLoaf.push(event.dough_temp_f || null);
+                    // Store event name with temp for stage events
+                    if (event.temp_f) {
+                        bakeOven.push({
+                            x: time,
+                            y: event.temp_f,
+                            stage: isStage ? event.event : null
+                        });
+                    } else {
+                        bakeOven.push(null);
+                    }
+                    if (event.dough_temp_f) {
+                        bakeLoaf.push({
+                            x: time,
+                            y: event.dough_temp_f,
+                            stage: isStage ? event.event : null
+                        });
+                    } else {
+                        bakeLoaf.push(null);
+                    }
                     if (event.note) {
                         bakeNotes.push({
                             x: time,
@@ -1646,7 +1900,6 @@ const statusViewPageHTML = `<!DOCTYPE html>
             fermentChart = new Chart(fermentCtx, {
                 type: 'line',
                 data: {
-                    labels: fermentLabels,
                     datasets: [
                         {
                             label: 'Kitchen Temp (°F)',
@@ -1654,7 +1907,8 @@ const statusViewPageHTML = `<!DOCTYPE html>
                             borderColor: 'rgb(59, 130, 246)',
                             backgroundColor: 'rgba(59, 130, 246, 0.1)',
                             tension: 0.4,
-                            spanGaps: true
+                            spanGaps: true,
+                            parsing: false
                         },
                         {
                             label: 'Dough Temp (°F)',
@@ -1662,7 +1916,8 @@ const statusViewPageHTML = `<!DOCTYPE html>
                             borderColor: 'rgb(220, 38, 38)',
                             backgroundColor: 'rgba(220, 38, 38, 0.1)',
                             tension: 0.4,
-                            spanGaps: true
+                            spanGaps: true,
+                            parsing: false
                         },
                         {
                             label: 'Notes',
@@ -1698,6 +1953,9 @@ const statusViewPageHTML = `<!DOCTYPE html>
                                     if (context.dataset.label === 'Notes' && context.raw.note) {
                                         return context.raw.note;
                                     }
+                                    if (context.raw && context.raw.stage) {
+                                        return 'Event: ' + context.raw.stage;
+                                    }
                                     return '';
                                 }
                             }
@@ -1710,7 +1968,6 @@ const statusViewPageHTML = `<!DOCTYPE html>
             bakeChart = new Chart(bakeCtx, {
                 type: 'line',
                 data: {
-                    labels: bakeLabels,
                     datasets: [
                         {
                             label: 'Oven Temp (°F)',
@@ -1718,7 +1975,8 @@ const statusViewPageHTML = `<!DOCTYPE html>
                             borderColor: 'rgb(249, 115, 22)',
                             backgroundColor: 'rgba(249, 115, 22, 0.1)',
                             tension: 0.4,
-                            spanGaps: true
+                            spanGaps: true,
+                            parsing: false
                         },
                         {
                             label: 'Loaf Internal Temp (°F)',
@@ -1726,7 +1984,8 @@ const statusViewPageHTML = `<!DOCTYPE html>
                             borderColor: 'rgb(147, 51, 234)',
                             backgroundColor: 'rgba(147, 51, 234, 0.1)',
                             tension: 0.4,
-                            spanGaps: true
+                            spanGaps: true,
+                            parsing: false
                         },
                         {
                             label: 'Notes',
@@ -1761,6 +2020,9 @@ const statusViewPageHTML = `<!DOCTYPE html>
                                 afterLabel: function(context) {
                                     if (context.dataset.label === 'Notes' && context.raw.note) {
                                         return context.raw.note;
+                                    }
+                                    if (context.raw && context.raw.stage) {
+                                        return 'Event: ' + context.raw.stage;
                                     }
                                     return '';
                                 }
