@@ -87,7 +87,12 @@ test-qr:
 	@echo "Testing QR code generation..."
 	@./test/test_qr.sh
 
-# Run all tests (unit + integration + UI + QR)
+# Test image upload and retrieval
+test-images:
+	@echo "Testing image upload and retrieval..."
+	@./test/test_images.sh
+
+# Run all tests (unit + integration + UI + QR + images)
 test-all: test
 	@echo ""
 	@echo "Running integration tests..."
@@ -98,6 +103,9 @@ test-all: test
 	@echo ""
 	@echo "Running QR code tests..."
 	@./test/test_qr.sh
+	@echo ""
+	@echo "Running image tests..."
+	@./test/test_images.sh
 
 # Download dependencies
 deps:
@@ -123,5 +131,6 @@ help:
 	@echo "  make test-integration - Run integration tests"
 	@echo "  make test-ui          - Test UI elements"
 	@echo "  make test-qr          - Test QR code generation"
-	@echo "  make test-all         - Run all tests (unit + integration + UI + QR)"
+	@echo "  make test-images      - Test image upload and retrieval"
+	@echo "  make test-all         - Run all tests (unit + integration + UI + QR + images)"
 	@echo "  make deps             - Download dependencies"
