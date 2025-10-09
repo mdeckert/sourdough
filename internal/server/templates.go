@@ -1847,6 +1847,8 @@ const statusViewPageHTML = `<!DOCTYPE html>
                     <button class="btn" style="background: #dc2626; border-color: #dc2626;" onclick="deleteBake()">🗑️ Delete This Bake</button>
                     <p style="color: #666; font-size: 12px; margin-top: 8px;">This will move the bake to the trash directory</p>
                 </div>
+
+                ` + navDropdownHTML + `
             </div>
             <div id="no-data" class="no-data" style="display: none;">
                 <h2>No Bakes Found</h2>
@@ -1941,78 +1943,6 @@ const statusViewPageHTML = `<!DOCTYPE html>
 
             // Find oven-in event to split kitchen vs oven temps, dough vs loaf temps
             const ovenInIdx = bake.events.findIndex(e => e.event === 'oven-in');
-
-            // Prepare data points
-            const labels = [];
-            const kitchenTemps = [];
-            const doughTemps = [];
-            const loafTemps = [];
-            const ovenTemps = [];
-            const notePoints = [];
-            const eventAnnotations = [];
-
-            bake.events.forEach((event, idx) => {
-                const time = new Date(event.timestamp);
-                labels.push(time);
-
-                // Temperature data - split kitchen vs oven temps
-                if (event.temp_f) {
-                    if (ovenInIdx >= 0 && idx >= ovenInIdx) {
-                        // After oven-in, temp_f is oven temp
-                        ovenTemps.push(event.temp_f);
-                        kitchenTemps.push(null);
-                    } else {
-                        // Before oven-in, temp_f is kitchen temp
-                        kitchenTemps.push(event.temp_f);
-                        ovenTemps.push(null);
-                    }
-                } else {
-                    kitchenTemps.push(null);
-                    ovenTemps.push(null);
-                }
-
-                // Separate dough temps (before oven) from loaf temps (during baking)
-                if (event.dough_temp_f) {
-                    if (ovenInIdx >= 0 && idx >= ovenInIdx) {
-                        // After oven-in, dough_temp_f is loaf internal temp
-                        loafTemps.push(event.dough_temp_f);
-                        doughTemps.push(null);
-                    } else {
-                        // Before oven-in, dough_temp_f is dough temp
-                        doughTemps.push(event.dough_temp_f);
-                        loafTemps.push(null);
-                    }
-                } else {
-                    doughTemps.push(null);
-                    loafTemps.push(null);
-                }
-
-                // Note markers
-                if (event.note) {
-                    notePoints.push({
-                        x: time,
-                        y: event.temp_f || event.dough_temp_f || 70,
-                        note: event.note
-                    });
-                }
-
-                // Event markers
-                if (['oven-in', 'oven-out', 'shaped', 'mixed', 'fridge-in'].includes(event.event)) {
-                    eventAnnotations.push({
-                        type: 'line',
-                        xMin: time,
-                        xMax: time,
-                        borderColor: event.event === 'oven-in' ? 'rgba(220, 38, 38, 0.5)' : 'rgba(59, 130, 246, 0.5)',
-                        borderWidth: 2,
-                        borderDash: [5, 5],
-                        label: {
-                            display: true,
-                            content: event.event,
-                            position: 'start'
-                        }
-                    });
-                }
-            });
 
             if (fermentChart) fermentChart.destroy();
             if (bakeChart) bakeChart.destroy();
