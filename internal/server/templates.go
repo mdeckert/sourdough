@@ -1948,13 +1948,11 @@ const statusViewPageHTML = `<!DOCTYPE html>
             if (bakeChart) bakeChart.destroy();
 
             // Fermentation Chart (Kitchen + Dough temps before oven-in)
-            const fermentLabels = [];
             const fermentKitchen = [];
             const fermentDough = [];
             const fermentNotes = [];
 
             // Baking Chart (Oven + Loaf temps from oven-in onwards)
-            const bakeLabels = [];
             const bakeOven = [];
             const bakeLoaf = [];
             const bakeNotes = [];
@@ -1969,16 +1967,13 @@ const statusViewPageHTML = `<!DOCTYPE html>
 
                 if (ovenInIdx < 0 || idx < ovenInIdx) {
                     // Before oven-in: fermentation phase
-                    fermentLabels.push(time);
-                    // Store event name with temp for stage events
+                    // Store event name with temp for stage events (only if temp exists)
                     if (event.temp_f) {
                         fermentKitchen.push({
                             x: time,
                             y: event.temp_f,
                             stage: isStage ? event.event : null
                         });
-                    } else {
-                        fermentKitchen.push(null);
                     }
                     if (event.dough_temp_f) {
                         fermentDough.push({
@@ -1986,8 +1981,6 @@ const statusViewPageHTML = `<!DOCTYPE html>
                             y: event.dough_temp_f,
                             stage: isStage ? event.event : null
                         });
-                    } else {
-                        fermentDough.push(null);
                     }
                     if (event.note) {
                         fermentNotes.push({
@@ -1998,16 +1991,13 @@ const statusViewPageHTML = `<!DOCTYPE html>
                     }
                 } else {
                     // From oven-in onwards: baking phase
-                    bakeLabels.push(time);
-                    // Store event name with temp for stage events
+                    // Store event name with temp for stage events (only if temp exists)
                     if (event.temp_f) {
                         bakeOven.push({
                             x: time,
                             y: event.temp_f,
                             stage: isStage ? event.event : null
                         });
-                    } else {
-                        bakeOven.push(null);
                     }
                     if (event.dough_temp_f) {
                         bakeLoaf.push({
@@ -2015,8 +2005,6 @@ const statusViewPageHTML = `<!DOCTYPE html>
                             y: event.dough_temp_f,
                             stage: isStage ? event.event : null
                         });
-                    } else {
-                        bakeLoaf.push(null);
                     }
                     if (event.note) {
                         bakeNotes.push({
