@@ -1997,7 +1997,7 @@ const statusViewPageHTML = `<!DOCTYPE html>
                     if (!fermentMinTime || time < fermentMinTime) fermentMinTime = time;
                     if (!fermentMaxTime || time > fermentMaxTime) fermentMaxTime = time;
 
-                    // Store event name with temp for stage events (only if temp exists)
+                    // Kitchen temp (ambient)
                     if (event.temp_f) {
                         fermentKitchen.push({
                             x: time,
@@ -2005,6 +2005,7 @@ const statusViewPageHTML = `<!DOCTYPE html>
                             stage: isStage ? event.event : null
                         });
                     }
+                    // Dough temp
                     if (event.dough_temp_f) {
                         fermentDough.push({
                             x: time,
@@ -2012,6 +2013,7 @@ const statusViewPageHTML = `<!DOCTYPE html>
                             stage: isStage ? event.event : null
                         });
                     }
+                    // Notes
                     if (event.note) {
                         fermentNotes.push({
                             x: time,
@@ -2025,14 +2027,15 @@ const statusViewPageHTML = `<!DOCTYPE html>
                     if (!bakeMinTime || time < bakeMinTime) bakeMinTime = time;
                     if (!bakeMaxTime || time > bakeMaxTime) bakeMaxTime = time;
 
-                    // Store event name with temp for stage events (only if temp exists)
-                    if (event.temp_f) {
+                    // Oven temp (use oven_temp_f field)
+                    if (event.oven_temp_f) {
                         bakeOven.push({
                             x: time,
-                            y: event.temp_f,
+                            y: event.oven_temp_f,
                             stage: isStage ? event.event : null
                         });
                     }
+                    // Loaf internal temp (use dough_temp_f field)
                     if (event.dough_temp_f) {
                         bakeLoaf.push({
                             x: time,
@@ -2040,6 +2043,7 @@ const statusViewPageHTML = `<!DOCTYPE html>
                             stage: isStage ? event.event : null
                         });
                     }
+                    // Notes
                     if (event.note) {
                         bakeNotes.push({
                             x: time,
@@ -2217,6 +2221,7 @@ const statusViewPageHTML = `<!DOCTYPE html>
                 const details = [];
                 if (event.temp_f) details.push('Kitchen: ' + event.temp_f + '°F');
                 if (event.dough_temp_f) details.push('Dough: ' + event.dough_temp_f + '°F');
+                if (event.oven_temp_f) details.push('Oven: ' + event.oven_temp_f + '°F');
                 if (event.fold_count) details.push('Fold #' + event.fold_count);
 
                 if (details.length > 0) {

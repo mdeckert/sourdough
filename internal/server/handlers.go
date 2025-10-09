@@ -359,8 +359,8 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 			// Dough or loaf internal temp (both use dough_temp_f)
 			event.WithDoughTemp(temp)
 		} else if tempType == "oven" {
-			// Oven temperature (use kitchen temp_f field for now)
-			event.WithTemp(temp)
+			// Oven temperature
+			event.WithOvenTemp(temp)
 		} else {
 			// Kitchen temp (manual, since auto-logged via Ecobee)
 			event.WithTemp(temp)
@@ -606,7 +606,7 @@ func (s *Server) handleOvenInLog(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create event with oven temperature
-	event := models.NewEvent(models.EventOvenIn).WithTemp(temp)
+	event := models.NewEvent(models.EventOvenIn).WithOvenTemp(temp)
 
 	// Append event to current bake
 	if err := s.storage.AppendEvent(event); err != nil {
@@ -661,7 +661,7 @@ func (s *Server) handleRemoveLidLog(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create event with oven temperature
-	event := models.NewEvent(models.EventRemoveLid).WithTemp(temp)
+	event := models.NewEvent(models.EventRemoveLid).WithOvenTemp(temp)
 
 	// Append event to current bake
 	if err := s.storage.AppendEvent(event); err != nil {

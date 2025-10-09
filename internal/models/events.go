@@ -29,6 +29,7 @@ type Event struct {
 	Event       EventType              `json:"event"`
 	TempF       *float64               `json:"temp_f,omitempty"`
 	DoughTempF  *float64               `json:"dough_temp_f,omitempty"`
+	OvenTempF   *float64               `json:"oven_temp_f,omitempty"`
 	FoldCount   *int                   `json:"fold_count,omitempty"`
 	Note        string                 `json:"note,omitempty"`
 	Image       string                 `json:"image,omitempty"`       // Image filename (stored in data/images/BAKE_DATE/)
@@ -88,6 +89,12 @@ func (e *Event) WithTemp(temp float64) *Event {
 // WithDoughTemp adds dough temperature to an event
 func (e *Event) WithDoughTemp(temp float64) *Event {
 	e.DoughTempF = &temp
+	return e
+}
+
+// WithOvenTemp adds oven temperature to an event
+func (e *Event) WithOvenTemp(temp float64) *Event {
+	e.OvenTempF = &temp
 	return e
 }
 
