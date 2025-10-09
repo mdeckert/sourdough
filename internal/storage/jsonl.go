@@ -427,3 +427,88 @@ func (s *Storage) GetImagePath(bakeDate, filename string) string {
 	bakeName := fmt.Sprintf("bake_%s", bakeDate)
 	return filepath.Join(s.dataDir, "images", bakeName, filename)
 }
+
+// DeleteEvent removes an event from the current bake by index and timestamp
+func (s *Storage) DeleteEvent(index int, timestamp string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Get current bake file
+	bakeFile := s.getCurrentBakeFile()
+
+	// Read all events
+	file, err := os.Open(bakeFile)
+	if err != nil {
+		return fmt.Errorf("failed to open bake file: %w", err)
+	}
+
+	var events []models.Event
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		var event models.Event
+		if err := json.Unmarshal(scanner.Bytes(), &event); err != nil {
+			file.Close()
+			return fmt.Errorf("failed to parse event: %w", err)
+		}
+		events = append(events, event)
+	}
+	file.Close()
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("error reading bake file: %w", err)
+	}
+
+	// Validate index
+	if index < 0 || index >= len(events) {
+		return fmt.Errorf("invalid event index: %d", index)
+	}
+
+	// Verify timestamp matches as extra safety
+	if events[index].Timestamp.Format(time.RFC3339Nano) != timestamp {
+		return fmt.Errorf("timestamp mismatch - event may have changed")
+	}
+
+	// Remove the event at the specified index
+	events = append(events[:index], events[index+1:]...)
+
+	// Write back all events
+	tempFile := bakeFile + ".tmp"
+	f, err := os.Create(tempFile)
+	if err != nil {
+		return fmt.Errorf("failed to create temp file: %w", err)
+	}
+
+	for _, event := range events {
+		data, err := json.Marshal(event)
+		if err != nil {
+			f.Close()
+			os.Remove(tempFile)
+			return fmt.Errorf("failed to marshal event: %w", err)
+		}
+
+		if _, err := f.Write(data); err != nil {
+			f.Close()
+			os.Remove(tempFile)
+			return fmt.Errorf("failed to write event: %w", err)
+		}
+
+		if _, err := f.Write([]byte("\n")); err != nil {
+			f.Close()
+			os.Remove(tempFile)
+			return fmt.Errorf("failed to write newline: %w", err)
+		}
+	}
+
+	if err := f.Close(); err != nil {
+		os.Remove(tempFile)
+		return fmt.Errorf("failed to close temp file: %w", err)
+	}
+
+	// Atomically replace original file with temp file
+	if err := os.Rename(tempFile, bakeFile); err != nil {
+		os.Remove(tempFile)
+		return fmt.Errorf("failed to replace bake file: %w", err)
+	}
+
+	return nil
+}

@@ -48,6 +48,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/bake/current", s.handleAPICurrentBake)
 	mux.HandleFunc("/api/bake/", s.handleAPIBake)
 	mux.HandleFunc("/api/bakes", s.handleAPIBakesList)
+	mux.HandleFunc("/api/event/delete", s.handleDeleteEvent)
 	mux.HandleFunc("/temp", s.handleTempPage)
 	mux.HandleFunc("/notes", s.handleNotesPage)
 	mux.HandleFunc("/complete", s.handleCompletePage)
@@ -359,6 +360,7 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 			models.EventFed:          true,
 			models.EventLevainReady:  true,
 			models.EventMixed:        true,
+			models.EventKnead:        true,
 			models.EventFold:         true,
 			models.EventShaped:       true,
 			models.EventFridgeIn:     true,
@@ -420,8 +422,9 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Auto-fetch kitchen temp from Ecobee if enabled and no temp already set
-	// Skip for temperature events (to avoid overwriting manual temps) and notes (not relevant)
-	if s.ecobee.IsEnabled() && event.Event != models.EventTemperature && event.Event != models.EventNote && event.TempF == nil {
+	// Skip for temperature events (to avoid overwriting manual temps), notes (not relevant),
+	// and when dough temp is set (user is logging dough/oven/loaf temp, don't mix with kitchen temp)
+	if s.ecobee.IsEnabled() && event.Event != models.EventTemperature && event.Event != models.EventNote && event.TempF == nil && event.DoughTempF == nil {
 		if temp, err := s.ecobee.GetTemperature(); err == nil && temp > 0 {
 			event.WithTemp(temp)
 			log.Printf("Auto-fetched kitchen temp from Ecobee: %.1f°F", temp)
@@ -852,4 +855,34 @@ func (s *Server) handleImage(w http.ResponseWriter, r *http.Request) {
 
 	// Serve the file
 	http.ServeFile(w, r, imagePath)
+}
+
+// handleDeleteEvent handles deleting an event from the current bake
+func (s *Server) handleDeleteEvent(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse request body
+	var req struct {
+		Index     int    `json:"index"`
+		Timestamp string `json:"timestamp"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Delete the event
+	if err := s.storage.DeleteEvent(req.Index, req.Timestamp); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to delete event: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "deleted",
+	})
 }

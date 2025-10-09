@@ -6,22 +6,23 @@ const navDropdownHTML = `
     <label style="display: block; color: #666; margin-bottom: 10px; font-weight: 500; font-size: 14px; text-align: center;">Quick Navigation</label>
     <select onchange="if(this.value) window.location.href=this.value" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 16px; background: white; cursor: pointer;">
         <option value="">Go to...</option>
+        <optgroup label="Logging">
+            <option value="/temp">🌡️ Log Temperature</option>
+            <option value="/notes">📝 Add Note</option>
+        </optgroup>
         <optgroup label="Workflow Events">
-            <option value="/loaf/start">🥖 Start Loaf</option>
+            <option value="/loaf/start">🥖 Set out starter</option>
             <option value="/log/fed">🍞 Fed</option>
             <option value="/log/levain-ready">⏰ Levain Ready</option>
             <option value="/log/mixed">🥣 Mixed</option>
+            <option value="/log/knead">✊ Knead</option>
             <option value="/log/fold">🙌 Fold</option>
             <option value="/log/shaped">👐 Shaped</option>
             <option value="/log/fridge-in">❄️ Fridge In</option>
             <option value="/log/oven-in">🔥 Oven In</option>
             <option value="/log/remove-lid">🌡️ Remove Lid</option>
             <option value="/log/oven-out">✅ Oven Out</option>
-            <option value="/complete">🎉 Complete</option>
-        </optgroup>
-        <optgroup label="Logging">
-            <option value="/temp">🌡️ Log Temperature</option>
-            <option value="/notes">📝 Add Note</option>
+            <option value="/complete">🎉 Tasting</option>
         </optgroup>
         <optgroup label="View">
             <option value="/ingredients">📋 Ingredients Reference</option>
@@ -1724,10 +1725,31 @@ const statusViewPageHTML = `<!DOCTYPE html>
             background: #f9fafb;
             border-radius: 10px;
             border-left: 4px solid #667eea;
+            position: relative;
         }
         .event-time { font-size: 12px; color: #666; margin-bottom: 5px; }
         .event-name { font-size: 16px; font-weight: 600; color: #333; }
         .event-details { font-size: 14px; color: #666; margin-top: 5px; }
+        .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-weight: 600;
+        }
+        .delete-btn:hover {
+            background: #dc2626;
+        }
+        .delete-btn:active {
+            background: #b91c1c;
+        }
         .event-note {
             background: #fef3c7;
             padding: 10px;
@@ -1958,8 +1980,12 @@ const statusViewPageHTML = `<!DOCTYPE html>
             const bakeNotes = [];
 
             // Stage events that should have labels
-            const stageEvents = ['starter-out', 'fed', 'levain-ready', 'mixed', 'fold', 'shaped',
+            const stageEvents = ['starter-out', 'fed', 'levain-ready', 'mixed', 'knead', 'fold', 'shaped',
                                  'fridge-in', 'fridge-out', 'oven-in', 'remove-lid', 'oven-out'];
+
+            // Track time range to ensure axis includes all events
+            let fermentMinTime = null, fermentMaxTime = null;
+            let bakeMinTime = null, bakeMaxTime = null;
 
             bake.events.forEach((event, idx) => {
                 const time = new Date(event.timestamp);
@@ -1967,6 +1993,10 @@ const statusViewPageHTML = `<!DOCTYPE html>
 
                 if (ovenInIdx < 0 || idx < ovenInIdx) {
                     // Before oven-in: fermentation phase
+                    // Track time range for all fermentation events
+                    if (!fermentMinTime || time < fermentMinTime) fermentMinTime = time;
+                    if (!fermentMaxTime || time > fermentMaxTime) fermentMaxTime = time;
+
                     // Store event name with temp for stage events (only if temp exists)
                     if (event.temp_f) {
                         fermentKitchen.push({
@@ -1991,6 +2021,10 @@ const statusViewPageHTML = `<!DOCTYPE html>
                     }
                 } else {
                     // From oven-in onwards: baking phase
+                    // Track time range for all baking events
+                    if (!bakeMinTime || time < bakeMinTime) bakeMinTime = time;
+                    if (!bakeMaxTime || time > bakeMaxTime) bakeMaxTime = time;
+
                     // Store event name with temp for stage events (only if temp exists)
                     if (event.temp_f) {
                         bakeOven.push({
@@ -2015,6 +2049,18 @@ const statusViewPageHTML = `<!DOCTYPE html>
                     }
                 }
             });
+
+            // Add 10% padding to time ranges for better visualization
+            if (fermentMinTime && fermentMaxTime) {
+                const fermentRange = fermentMaxTime - fermentMinTime;
+                fermentMinTime = new Date(fermentMinTime.getTime() - fermentRange * 0.05);
+                fermentMaxTime = new Date(fermentMaxTime.getTime() + fermentRange * 0.1);
+            }
+            if (bakeMinTime && bakeMaxTime) {
+                const bakeRange = bakeMaxTime - bakeMinTime;
+                bakeMinTime = new Date(bakeMinTime.getTime() - bakeRange * 0.05);
+                bakeMaxTime = new Date(bakeMaxTime.getTime() + bakeRange * 0.1);
+            }
 
             // Create Fermentation Chart
             fermentChart = new Chart(fermentCtx, {
@@ -2053,12 +2099,14 @@ const statusViewPageHTML = `<!DOCTYPE html>
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
+                    interaction: { mode: 'nearest', intersect: false },
                     scales: {
                         x: {
                             type: 'time',
                             time: { displayFormats: { minute: 'h:mm a', hour: 'MMM d ha', day: 'MMM d' } },
-                            title: { display: true, text: 'Time' }
+                            title: { display: true, text: 'Time' },
+                            min: fermentMinTime,
+                            max: fermentMaxTime
                         },
                         y: {
                             title: { display: true, text: 'Temperature (°F)' },
@@ -2121,12 +2169,14 @@ const statusViewPageHTML = `<!DOCTYPE html>
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
+                    interaction: { mode: 'nearest', intersect: false },
                     scales: {
                         x: {
                             type: 'time',
                             time: { displayFormats: { minute: 'h:mm a', hour: 'MMM d ha', day: 'MMM d' } },
-                            title: { display: true, text: 'Time' }
+                            title: { display: true, text: 'Time' },
+                            min: bakeMinTime,
+                            max: bakeMaxTime
                         },
                         y: {
                             title: { display: true, text: 'Temperature (°F)' },
@@ -2157,9 +2207,10 @@ const statusViewPageHTML = `<!DOCTYPE html>
             const timeline = document.getElementById('timeline');
             let html = '<h2 style="margin-bottom: 20px;">Event Timeline</h2>';
 
-            bake.events.forEach(event => {
+            bake.events.forEach((event, idx) => {
                 const time = new Date(event.timestamp);
                 html += '<div class="event-item">';
+                html += '<button class="delete-btn" onclick="deleteEvent(' + idx + ', \'' + event.timestamp + '\', \'' + event.event + '\')">Delete</button>';
                 html += '<div class="event-time">' + time.toLocaleString() + '</div>';
                 html += '<div class="event-name">' + event.event + '</div>';
 
@@ -2200,6 +2251,32 @@ const statusViewPageHTML = `<!DOCTYPE html>
         function closeModal() {
             const modal = document.getElementById('imageModal');
             modal.classList.remove('active');
+        }
+
+        async function deleteEvent(index, timestamp, eventType) {
+            const confirmMsg = 'Delete event "' + eventType + '" at ' + new Date(timestamp).toLocaleString() + '?';
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/event/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ index: index, timestamp: timestamp })
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    alert('Failed to delete event: ' + error);
+                    return;
+                }
+
+                // Reload the page to show updated data
+                window.location.reload();
+            } catch (error) {
+                alert('Error deleting event: ' + error);
+            }
         }
 
         // Close modal with Escape key

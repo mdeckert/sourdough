@@ -10,6 +10,7 @@ const (
 	EventFed           EventType = "fed"
 	EventLevainReady   EventType = "levain-ready"
 	EventMixed         EventType = "mixed"
+	EventKnead         EventType = "knead"
 	EventFold          EventType = "fold"
 	EventShaped        EventType = "shaped"
 	EventFridgeIn      EventType = "fridge-in"

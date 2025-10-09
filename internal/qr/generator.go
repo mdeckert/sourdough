@@ -35,23 +35,23 @@ func GenerateAll(serverURL, outputDir string) error {
 
 	events := []EventQR{
 		// Workflow stages (in order with numbers)
-		{"start", "1. START LOAF", fmt.Sprintf("%s/loaf/start", serverURL)},
+		{"start", "1. Set out starter", fmt.Sprintf("%s/loaf/start", serverURL)},
 		{"fed", "2. Fed", fmt.Sprintf("%s/log/fed", serverURL)},
 		{"levain-ready", "3. Levain Ready", fmt.Sprintf("%s/log/levain-ready", serverURL)},
 		{"mixed", "4. Mixed", fmt.Sprintf("%s/log/mixed", serverURL)},
-		{"fold", "5. Fold", fmt.Sprintf("%s/log/fold", serverURL)},
-		{"shaped", "6. Shaped", fmt.Sprintf("%s/log/shaped", serverURL)},
-		{"fridge-in", "7. Fridge In", fmt.Sprintf("%s/log/fridge-in", serverURL)},
-		{"oven-in", "8. Oven In", fmt.Sprintf("%s/log/oven-in", serverURL)},
-		{"remove-lid", "9. Remove Lid", fmt.Sprintf("%s/log/remove-lid", serverURL)},
-		{"oven-out", "10. Oven Out", fmt.Sprintf("%s/log/oven-out", serverURL)},
-		{"complete", "11. COMPLETE", fmt.Sprintf("%s/complete", serverURL)},
+		{"knead", "5. Knead", fmt.Sprintf("%s/log/knead", serverURL)},
+		{"fold", "6. Fold", fmt.Sprintf("%s/log/fold", serverURL)},
+		{"shaped", "7. Shaped", fmt.Sprintf("%s/log/shaped", serverURL)},
+		{"fridge-in", "8. Fridge In", fmt.Sprintf("%s/log/fridge-in", serverURL)},
+		{"oven-in", "9. Oven In", fmt.Sprintf("%s/log/oven-in", serverURL)},
+		{"remove-lid", "10. Remove Lid", fmt.Sprintf("%s/log/remove-lid", serverURL)},
+		{"oven-out", "11. Oven Out", fmt.Sprintf("%s/log/oven-out", serverURL)},
+		{"complete", "12. Tasting", fmt.Sprintf("%s/complete", serverURL)},
 		// Anytime actions
 		{"temp", "LOG TEMP", fmt.Sprintf("%s/temp", serverURL)},
 		{"notes", "ADD NOTE", fmt.Sprintf("%s/notes", serverURL)},
 		// View actions
 		{"status", "VIEW STATUS", fmt.Sprintf("%s/view/status", serverURL)},
-		{"history", "VIEW HISTORY", fmt.Sprintf("%s/view/history", serverURL)},
 		{"qr-pdf", "GET QR CODES", fmt.Sprintf("%s/qrcodes.pdf", serverURL)},
 	}
 

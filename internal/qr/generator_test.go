@@ -26,10 +26,10 @@ func TestGenerateAll(t *testing.T) {
 
 	// Verify expected files were created
 	expectedFiles := []string{
-		"start.png", "fed.png", "levain-ready.png", "mixed.png",
+		"start.png", "fed.png", "levain-ready.png", "mixed.png", "knead.png",
 		"fold.png", "shaped.png", "fridge-in.png", "oven-in.png",
-		"oven-out.png", "temp.png", "notes.png", "complete.png",
-		"status.png", "history.png", "qr-pdf.png", "qrcodes.pdf",
+		"remove-lid.png", "oven-out.png", "temp.png", "notes.png", "complete.png",
+		"status.png", "qr-pdf.png", "sheet.png", "qrcodes.pdf",
 	}
 
 	for _, filename := range expectedFiles {
