@@ -113,7 +113,8 @@ test_duplicate_start() {
 test_log_events() {
     log_test "Log workflow events"
 
-    events=("fed" "levain-ready" "mixed" "fold" "fold" "fold" "fold" "shaped" "fridge-in" "fridge-out" "oven-in" "remove-lid" "oven-out")
+    # Regular events that don't require special parameters
+    events=("fed" "levain-ready" "mixed" "fold" "fold" "fold" "fold" "shaped" "fridge-in" "fridge-out")
 
     for event in "${events[@]}"; do
         response=$(curl -s -X POST "$BASE_URL/log/$event")
@@ -124,6 +125,32 @@ test_log_events() {
         fi
         sleep 0.05
     done
+
+    # oven-in requires temperature parameter as query param
+    response=$(curl -s -X POST "$BASE_URL/log/oven-in?temp=450")
+    if echo "$response" | grep -q '"status":"success"'; then
+        log_pass "Event 'oven-in' logged"
+    else
+        log_fail "Failed to log event 'oven-in': $response"
+    fi
+    sleep 0.05
+
+    # remove-lid requires temperature parameter as query param
+    response=$(curl -s -X POST "$BASE_URL/log/remove-lid?temp=450")
+    if echo "$response" | grep -q '"status":"success"'; then
+        log_pass "Event 'remove-lid' logged"
+    else
+        log_fail "Failed to log event 'remove-lid': $response"
+    fi
+    sleep 0.05
+
+    # oven-out is a regular event
+    response=$(curl -s -X POST "$BASE_URL/log/oven-out")
+    if echo "$response" | grep -q '"status":"logged"'; then
+        log_pass "Event 'oven-out' logged"
+    else
+        log_fail "Failed to log event 'oven-out': $response"
+    fi
 }
 
 test_temperature_logging() {
