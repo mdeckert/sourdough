@@ -440,7 +440,51 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		eventName := string(event.Event)
 		w.Header().Set("Content-Type", "text/html")
-		successHTML := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Event Logged</title><style>body{font-family:sans-serif;background:#10b981;color:white;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;text-align:center;}h1{font-size:48px;margin:0 0 10px 0;}p{font-size:20px;margin:0;}.time{opacity:0.8;font-size:16px;margin-top:10px;}</style></head><body><div><h1>✅</h1><h1>%s</h1><p>Event logged successfully</p><p class="time">%s</p></div></body></html>`, eventName, event.Timestamp.Format("3:04 PM"))
+
+		// Build HTML with navigation dropdown
+		htmlTemplate := `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Logged</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #10b981 0%%, #059669 100%%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 100%%;
+            text-align: center;
+        }
+        h1 { font-size: 48px; margin: 0 0 10px 0; }
+        .event-name { color: #333; font-size: 28px; font-weight: 600; margin-bottom: 10px; }
+        .success-msg { color: #059669; font-size: 20px; margin-bottom: 10px; }
+        .time { color: #666; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✅</h1>
+        <div class="event-name">%s</div>
+        <p class="success-msg">Event logged successfully</p>
+        <p class="time">%s</p>
+        %s
+    </div>
+</body>
+</html>`
+		successHTML := fmt.Sprintf(htmlTemplate, eventName, event.Timestamp.Format("3:04 PM"), navDropdownHTML)
 		w.Write([]byte(successHTML))
 		return
 	}
