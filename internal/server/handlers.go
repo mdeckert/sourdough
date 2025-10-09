@@ -126,6 +126,21 @@ func (s *Server) logTemperature() {
 		return
 	}
 
+	// Check if bake has reached fridge-in stage
+	bake, err := s.storage.ReadCurrentBake()
+	if err != nil {
+		log.Printf("Warning: Failed to read current bake: %v", err)
+		return
+	}
+
+	// Stop auto-logging if fridge-in has been reached
+	for _, event := range bake.Events {
+		if event.Event == models.EventFridgeIn {
+			log.Printf("Skipping auto-log: bake has reached fridge-in stage")
+			return
+		}
+	}
+
 	// Fetch temperature from Ecobee
 	temp, err := s.ecobee.GetTemperature()
 	if err != nil {
