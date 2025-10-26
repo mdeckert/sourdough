@@ -2241,8 +2241,9 @@ const statusViewPageHTML = `<!DOCTYPE html>
             const fermentCtx = document.getElementById('fermentChart');
             const bakeCtx = document.getElementById('bakeChart');
 
-            // Find oven-in event to split kitchen vs oven temps, dough vs loaf temps
+            // Find oven-in and oven-out events to split kitchen vs oven temps, dough vs loaf temps
             const ovenInIdx = bake.events.findIndex(e => e.event === 'oven-in');
+            const ovenOutIdx = bake.events.findIndex(e => e.event === 'oven-out');
 
             if (fermentChart) fermentChart.destroy();
             if (bakeChart) bakeChart.destroy();
@@ -2301,9 +2302,12 @@ const statusViewPageHTML = `<!DOCTYPE html>
                     }
                 } else {
                     // From oven-in onwards: baking phase
-                    // Track time range for all baking events
-                    if (!bakeMinTime || time < bakeMinTime) bakeMinTime = time;
-                    if (!bakeMaxTime || time > bakeMaxTime) bakeMaxTime = time;
+                    // Track time range only until oven-out (not cooling phase)
+                    const isBeforeOvenOut = ovenOutIdx < 0 || idx <= ovenOutIdx;
+                    if (isBeforeOvenOut) {
+                        if (!bakeMinTime || time < bakeMinTime) bakeMinTime = time;
+                        if (!bakeMaxTime || time > bakeMaxTime) bakeMaxTime = time;
+                    }
 
                     // Oven temp (use oven_temp_f field)
                     if (event.oven_temp_f) {
