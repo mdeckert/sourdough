@@ -2330,6 +2330,17 @@ const statusViewPageHTML = `<!DOCTYPE html>
                             stage: isStage ? event.event : null
                         });
                     }
+
+                    // Handle oven-out event marker (uses temp_f for kitchen temp at time of removal)
+                    // Show it on oven temp line even though it's technically ambient temp
+                    if (event.event === 'oven-out' && event.temp_f) {
+                        bakeOven.push({
+                            x: time,
+                            y: event.temp_f,
+                            stage: event.event
+                        });
+                    }
+
                     // Notes
                     if (event.note) {
                         bakeNotes.push({
@@ -2506,7 +2517,11 @@ const statusViewPageHTML = `<!DOCTYPE html>
                 html += '<div class="event-name">' + event.event + '</div>';
 
                 const details = [];
-                if (event.temp_f) details.push('Kitchen: ' + event.temp_f + '°F');
+                // Special handling: oven-in used to store oven temp in temp_f (backwards compatibility)
+                if (event.temp_f) {
+                    const label = event.event === 'oven-in' ? 'Oven' : 'Kitchen';
+                    details.push(label + ': ' + event.temp_f + '°F');
+                }
                 if (event.dough_temp_f) details.push('Dough: ' + event.dough_temp_f + '°F');
                 if (event.oven_temp_f) details.push('Oven: ' + event.oven_temp_f + '°F');
                 if (event.fold_count) details.push('Fold #' + event.fold_count);
