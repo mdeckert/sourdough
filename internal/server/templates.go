@@ -1969,8 +1969,6 @@ const statusViewPageHTML = `<!DOCTYPE html>
     <title>Bake Status</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -2309,12 +2307,19 @@ const statusViewPageHTML = `<!DOCTYPE html>
                         if (!bakeMaxTime || time > bakeMaxTime) bakeMaxTime = time;
                     }
 
-                    // Oven temp (use oven_temp_f field)
+                    // Oven temp (use oven_temp_f field, or temp_f for backwards compatibility)
                     if (event.oven_temp_f) {
                         bakeOven.push({
                             x: time,
                             y: event.oven_temp_f,
                             stage: isStage ? event.event : null
+                        });
+                    } else if (event.temp_f && event.event === 'oven-in') {
+                        // Backwards compatibility: old oven-in events used temp_f
+                        bakeOven.push({
+                            x: time,
+                            y: event.temp_f,
+                            stage: event.event
                         });
                     }
                     // Loaf internal temp (use dough_temp_f field)
@@ -2573,58 +2578,6 @@ const statusViewPageHTML = `<!DOCTYPE html>
             }
         });
 
-        function resetZoom() {
-            if (chart) {
-                chart.resetZoom();
-                // Restore original Y-axis settings
-                chart.options.scales.y.min = 60;
-                chart.options.scales.y.max = 500;
-                chart.update();
-            }
-        }
-
-        function zoomToBaking() {
-            if (!bakeData) return;
-
-            const ovenInEvent = bakeData.events.find(e => e.event === 'oven-in');
-            const ovenOutEvent = bakeData.events.find(e => e.event === 'oven-out');
-
-            if (ovenInEvent) {
-                const start = new Date(ovenInEvent.timestamp);
-                const end = ovenOutEvent ? new Date(ovenOutEvent.timestamp) : new Date(start.getTime() + 60*60*1000);
-
-                // Find all temps during baking period
-                const bakingEvents = bakeData.events.filter(e => {
-                    const t = new Date(e.timestamp);
-                    return t >= start && t <= end;
-                });
-
-                const temps = [];
-                bakingEvents.forEach(e => {
-                    if (e.temp_f) temps.push(e.temp_f);
-                    if (e.dough_temp_f) temps.push(e.dough_temp_f);
-                });
-
-                if (temps.length === 0) return;
-
-                // Calculate Y-axis range with padding
-                let minTemp = Math.min(...temps);
-                let maxTemp = Math.max(...temps);
-
-                // Add 10% padding or at least 20 degrees
-                const range = maxTemp - minTemp;
-                const padding = Math.max(range * 0.1, 20);
-
-                minTemp = Math.floor(minTemp - padding);
-                maxTemp = Math.ceil(maxTemp + padding);
-
-                // Zoom both axes
-                chart.zoomScale('x', {min: start, max: end}, 'default');
-                chart.options.scales.y.min = minTemp;
-                chart.options.scales.y.max = maxTemp;
-                chart.update();
-            }
-        }
 
         async function deleteBake() {
             // Get the date parameter if viewing a specific bake
