@@ -50,6 +50,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/bakes", s.handleAPIBakesList)
 	mux.HandleFunc("/api/event/delete", s.handleDeleteEvent)
 	mux.HandleFunc("/temp", s.handleTempPage)
+	mux.HandleFunc("/log/temperature", s.handleTemperatureWithImage)
 	mux.HandleFunc("/notes", s.handleNotesPage)
 	mux.HandleFunc("/complete", s.handleCompletePage)
 	mux.HandleFunc("/ingredients", s.handleIngredientsPage)
@@ -395,14 +396,61 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 
 		// Handle loaf-complete with assessment data (from web UI)
 		if eventType == models.EventLoafComplete && r.Method == http.MethodPost {
-			var reqData struct {
-				Assessment models.Assessment `json:"assessment"`
-			}
-			if err := json.NewDecoder(r.Body).Decode(&reqData); err == nil {
-				if event.Data == nil {
-					event.Data = make(map[string]interface{})
+			// Check if this is multipart form data (with potential image)
+			contentType := r.Header.Get("Content-Type")
+			if strings.HasPrefix(contentType, "multipart/form-data") {
+				// Parse multipart form with 32MB max memory
+				if err := r.ParseMultipartForm(32 << 20); err != nil {
+					http.Error(w, "Failed to parse multipart form", http.StatusBadRequest)
+					return
 				}
-				event.Data["assessment"] = reqData.Assessment
+
+				// Parse assessment JSON from form field
+				assessmentJSON := r.FormValue("assessment")
+				if assessmentJSON != "" {
+					var assessment models.Assessment
+					if err := json.Unmarshal([]byte(assessmentJSON), &assessment); err == nil {
+						if event.Data == nil {
+							event.Data = make(map[string]interface{})
+						}
+						event.Data["assessment"] = assessment
+					}
+				}
+
+				// Handle image upload if present
+				if file, header, err := r.FormFile("image"); err == nil {
+					defer file.Close()
+
+					// Validate image type
+					if !strings.HasPrefix(header.Header.Get("Content-Type"), "image/") {
+						http.Error(w, "Invalid image type", http.StatusBadRequest)
+						return
+					}
+
+					// Generate image filename with timestamp
+					imageFilename := fmt.Sprintf("%d.jpg", time.Now().UnixMilli())
+
+					// Save image
+					if err := s.storage.SaveImage(imageFilename, file); err != nil {
+						log.Printf("Failed to save image: %v", err)
+						http.Error(w, "Failed to save image", http.StatusInternalServerError)
+						return
+					}
+
+					event.WithImage(imageFilename)
+					log.Printf("Saved loaf completion image: %s", imageFilename)
+				}
+			} else {
+				// Handle legacy JSON format (for backward compatibility)
+				var reqData struct {
+					Assessment models.Assessment `json:"assessment"`
+				}
+				if err := json.NewDecoder(r.Body).Decode(&reqData); err == nil {
+					if event.Data == nil {
+						event.Data = make(map[string]interface{})
+					}
+					event.Data["assessment"] = reqData.Assessment
+				}
 			}
 		}
 
@@ -535,6 +583,79 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleTempPage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	w.Write([]byte(tempPageHTML))
+}
+
+// handleTemperatureWithImage handles temperature logging with optional image attachment
+func (s *Server) handleTemperatureWithImage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse multipart form with 32MB max memory
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		http.Error(w, "Failed to parse multipart form", http.StatusBadRequest)
+		return
+	}
+
+	// Get temperature value
+	tempStr := r.FormValue("temp")
+	if tempStr == "" {
+		http.Error(w, "Temperature value required", http.StatusBadRequest)
+		return
+	}
+
+	temp, err := strconv.ParseFloat(tempStr, 64)
+	if err != nil {
+		http.Error(w, "Invalid temperature value", http.StatusBadRequest)
+		return
+	}
+
+	// Create temperature event
+	event := models.NewEvent(models.EventTemperature)
+
+	// Get temperature type (dough, oven, or kitchen)
+	tempType := r.FormValue("type")
+	if tempType == "dough" {
+		event.WithDoughTemp(temp)
+	} else if tempType == "oven" {
+		event.WithOvenTemp(temp)
+	} else {
+		event.WithTemp(temp)
+	}
+
+	// Handle image upload if present
+	if file, header, err := r.FormFile("image"); err == nil {
+		defer file.Close()
+
+		// Validate image type
+		if !strings.HasPrefix(header.Header.Get("Content-Type"), "image/") {
+			http.Error(w, "Invalid image type", http.StatusBadRequest)
+			return
+		}
+
+		// Generate image filename with timestamp
+		imageFilename := fmt.Sprintf("%d.jpg", time.Now().UnixMilli())
+
+		// Save image
+		if err := s.storage.SaveImage(imageFilename, file); err != nil {
+			log.Printf("Failed to save image: %v", err)
+			http.Error(w, "Failed to save image", http.StatusInternalServerError)
+			return
+		}
+
+		event.WithImage(imageFilename)
+		log.Printf("Saved temperature image: %s", imageFilename)
+	}
+
+	// Save event
+	if err := s.storage.AppendEvent(event); err != nil {
+		http.Error(w, fmt.Sprintf("Error logging temperature: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Temperature logged successfully"))
 }
 
 // handleNotesPage serves the notes logging web UI
@@ -883,6 +1004,7 @@ func (s *Server) handleDeleteEvent(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Index     int    `json:"index"`
 		Timestamp string `json:"timestamp"`
+		BakeDate  string `json:"bake_date,omitempty"` // Optional: specify which bake to delete from
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -891,7 +1013,7 @@ func (s *Server) handleDeleteEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete the event
-	if err := s.storage.DeleteEvent(req.Index, req.Timestamp); err != nil {
+	if err := s.storage.DeleteEvent(req.Index, req.Timestamp, req.BakeDate); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to delete event: %v", err), http.StatusInternalServerError)
 		return
 	}

@@ -428,13 +428,21 @@ func (s *Storage) GetImagePath(bakeDate, filename string) string {
 	return filepath.Join(s.dataDir, "images", bakeName, filename)
 }
 
-// DeleteEvent removes an event from the current bake by index and timestamp
-func (s *Storage) DeleteEvent(index int, timestamp string) error {
+// DeleteEvent removes an event from a bake by index and timestamp
+// If bakeDate is empty, uses the current bake
+func (s *Storage) DeleteEvent(index int, timestamp string, bakeDate string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// Get current bake file
-	bakeFile := s.getCurrentBakeFile()
+	// Get bake file - either specific date or current
+	var bakeFile string
+	if bakeDate != "" {
+		// Remove 'bake_' prefix if present (bakeDate might be full filename or just date)
+		dateOnly := strings.TrimPrefix(bakeDate, "bake_")
+		bakeFile = s.getBakeFile(dateOnly)
+	} else {
+		bakeFile = s.getCurrentBakeFile()
+	}
 
 	// Read all events
 	file, err := os.Open(bakeFile)

@@ -245,10 +245,12 @@ func generatePDF(events []EventQR, qrDir, outputPath string) error {
 			pdf.Image(qrPath, x, y, qrSize, qrSize, false, "", 0, "")
 		}
 
-		// Add label below QR code
+		// Add label below QR code as hyperlink
 		pdf.SetFont("Arial", "B", 8)
+		pdf.SetTextColor(0, 0, 255) // Blue color for links
 		pdf.SetXY(x, y+qrSize+1)
-		pdf.CellFormat(qrSize, 4, event.Label, "0", 0, "C", false, 0, "")
+		pdf.CellFormat(qrSize, 4, event.Label, "0", 0, "C", false, 0, event.URL)
+		pdf.SetTextColor(0, 0, 0) // Reset to black
 
 		// Move to next position
 		col++

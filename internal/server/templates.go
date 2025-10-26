@@ -276,6 +276,47 @@ const completePageHTML = `<!DOCTYPE html>
         .slider-container { display: flex; align-items: center; gap: 15px; }
         input[type="range"] { flex: 1; height: 8px; }
         .slider-value { font-size: 24px; font-weight: bold; color: #667eea; min-width: 50px; text-align: center; }
+        .image-upload {
+            margin-top: 15px;
+        }
+        .image-upload-btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #3b82f6;
+            color: white;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+            border: none;
+        }
+        .image-upload-btn:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+        }
+        .image-preview {
+            margin-top: 15px;
+            display: none;
+        }
+        .image-preview img {
+            max-width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .image-preview-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        .remove-image-btn {
+            padding: 8px 16px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -348,6 +389,20 @@ const completePageHTML = `<!DOCTYPE html>
                 <textarea id="notes" placeholder="Any additional observations..."></textarea>
             </div>
 
+            <div class="form-group image-upload">
+                <label>📷 Add Photo (optional)</label>
+                <input type="file" id="imageInput" accept="image/*" capture="environment" style="display: none" onchange="handleImageSelect(event)">
+                <button type="button" class="image-upload-btn" onclick="document.getElementById('imageInput').click()">
+                    Take Photo / Choose Image
+                </button>
+                <div id="imagePreview" class="image-preview">
+                    <img id="previewImg" src="" alt="Preview">
+                    <div class="image-preview-actions">
+                        <button type="button" class="remove-image-btn" onclick="removeImage()">Remove Image</button>
+                    </div>
+                </div>
+            </div>
+
             <button type="submit">Complete Bake</button>
 
             ` + navDropdownHTML + `
@@ -359,9 +414,78 @@ const completePageHTML = `<!DOCTYPE html>
         const crumbValue = document.getElementById('crumbValue');
         const scoreSlider = document.getElementById('score');
         const scoreValue = document.getElementById('scoreValue');
+        let selectedImage = null;
 
         crumbSlider.oninput = () => crumbValue.textContent = crumbSlider.value;
         scoreSlider.oninput = () => scoreValue.textContent = scoreSlider.value;
+
+        function handleImageSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                showError('Please select an image file');
+                return;
+            }
+
+            compressImage(file, 1920, 0.85).then(compressedBlob => {
+                selectedImage = compressedBlob;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('previewImg').src = e.target.result;
+                    document.getElementById('imagePreview').style.display = 'block';
+                };
+                reader.readAsDataURL(compressedBlob);
+            }).catch(err => {
+                showError('Failed to process image: ' + err.message);
+            });
+        }
+
+        function compressImage(file, maxWidth, quality) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > maxWidth) {
+                            height = (height * maxWidth) / width;
+                            width = maxWidth;
+                        }
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        canvas.toBlob(
+                            blob => {
+                                if (!blob) {
+                                    reject(new Error('Failed to compress image'));
+                                    return;
+                                }
+                                resolve(blob);
+                            },
+                            'image/jpeg',
+                            quality
+                        );
+                    };
+                    img.onerror = () => reject(new Error('Failed to load image'));
+                    img.src = e.target.result;
+                };
+                reader.onerror = () => reject(new Error('Failed to read file'));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function removeImage() {
+            selectedImage = null;
+            document.getElementById('imageInput').value = '';
+            document.getElementById('imagePreview').style.display = 'none';
+        }
 
         document.getElementById('assessmentForm').onsubmit = async (e) => {
             e.preventDefault();
@@ -374,15 +498,20 @@ const completePageHTML = `<!DOCTYPE html>
                 notes: document.getElementById('notes').value
             };
 
-            const button = document.querySelector('button');
+            const button = document.querySelector('button[type="submit"]');
             button.disabled = true;
             button.textContent = 'Completing...';
 
             try {
+                const formData = new FormData();
+                formData.append('assessment', JSON.stringify(data));
+                if (selectedImage) {
+                    formData.append('image', selectedImage);
+                }
+
                 const response = await fetch('/log/loaf-complete', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ assessment: data })
+                    body: formData
                 });
 
                 if (response.ok) {
@@ -1014,6 +1143,48 @@ const tempPageHTML = `<!DOCTYPE html>
             min-width: 70px;
             text-align: center;
         }
+        .image-upload {
+            margin-top: 15px;
+            margin-bottom: 20px;
+        }
+        .image-upload-btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #3b82f6;
+            color: white;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+            border: none;
+        }
+        .image-upload-btn:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+        }
+        .image-preview {
+            margin-top: 15px;
+            display: none;
+        }
+        .image-preview img {
+            max-width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .image-preview-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        .remove-image-btn {
+            padding: 8px 16px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -1035,6 +1206,20 @@ const tempPageHTML = `<!DOCTYPE html>
         <div class="input-group">
             <label for="temp">Manual Entry</label>
             <input type="number" id="temp" min="60" max="80" step="1" placeholder="76">
+        </div>
+
+        <div class="input-group image-upload">
+            <label>📷 Add Photo (optional)</label>
+            <input type="file" id="imageInput" accept="image/*" capture="environment" style="display: none" onchange="handleImageSelect(event)">
+            <button class="image-upload-btn" onclick="document.getElementById('imageInput').click()">
+                Take Photo / Choose Image
+            </button>
+            <div id="imagePreview" class="image-preview">
+                <img id="previewImg" src="" alt="Preview">
+                <div class="image-preview-actions">
+                    <button class="remove-image-btn" onclick="removeImage()">Remove Image</button>
+                </div>
+            </div>
         </div>
 
         <div class="radio-group">
@@ -1059,6 +1244,7 @@ const tempPageHTML = `<!DOCTYPE html>
         const slider = document.getElementById('tempSlider');
         const sliderValue = document.getElementById('sliderValue');
         const manualInput = document.getElementById('temp');
+        let selectedImage = null;
 
         // Update slider display
         slider.oninput = function() {
@@ -1074,6 +1260,74 @@ const tempPageHTML = `<!DOCTYPE html>
             }
         };
 
+        function handleImageSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                showError('Please select an image file');
+                return;
+            }
+
+            compressImage(file, 1920, 0.85).then(compressedBlob => {
+                selectedImage = compressedBlob;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('previewImg').src = e.target.result;
+                    document.getElementById('imagePreview').style.display = 'block';
+                };
+                reader.readAsDataURL(compressedBlob);
+            }).catch(err => {
+                showError('Failed to process image: ' + err.message);
+            });
+        }
+
+        function compressImage(file, maxWidth, quality) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > maxWidth) {
+                            height = (height * maxWidth) / width;
+                            width = maxWidth;
+                        }
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        canvas.toBlob(
+                            blob => {
+                                if (!blob) {
+                                    reject(new Error('Failed to compress image'));
+                                    return;
+                                }
+                                resolve(blob);
+                            },
+                            'image/jpeg',
+                            quality
+                        );
+                    };
+                    img.onerror = () => reject(new Error('Failed to load image'));
+                    img.src = e.target.result;
+                };
+                reader.onerror = () => reject(new Error('Failed to read file'));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function removeImage() {
+            selectedImage = null;
+            document.getElementById('imageInput').value = '';
+            document.getElementById('imagePreview').style.display = 'none';
+        }
+
         async function submitTemp(tempType) {
             let temp = manualInput.value || slider.value;
 
@@ -1087,23 +1341,47 @@ const tempPageHTML = `<!DOCTYPE html>
                 // Map tempType to query parameter
                 let typeParam = '';
                 if (tempType === 'dough' || tempType === 'loaf') {
-                    typeParam = '?type=dough';  // Both use dough_temp_f field
+                    typeParam = 'dough';  // Both use dough_temp_f field
                 } else if (tempType === 'oven') {
-                    typeParam = '?type=oven';
+                    typeParam = 'oven';
                 }
-                // No param for kitchen (auto-logged via Ecobee anyway)
 
-                const url = '/log/temp/' + temp + typeParam;
-                const response = await fetch(url, { method: 'POST' });
+                // If there's an image, use multipart form data
+                if (selectedImage) {
+                    const formData = new FormData();
+                    formData.append('temp', temp);
+                    formData.append('type', typeParam);
+                    formData.append('image', selectedImage);
 
-                if (response.ok) {
-                    showSuccess(temp + '°F (' + tempType + ') logged!');
-                    manualInput.value = '';
-                    slider.value = 70;
-                    sliderValue.textContent = '70°F';
+                    const response = await fetch('/log/temperature', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (response.ok) {
+                        showSuccess(temp + '°F (' + tempType + ') logged!');
+                        manualInput.value = '';
+                        slider.value = 70;
+                        sliderValue.textContent = '70°F';
+                        removeImage();
+                    } else {
+                        const text = await response.text();
+                        showError('Error: ' + text);
+                    }
                 } else {
-                    const text = await response.text();
-                    showError('Error: ' + text);
+                    // No image - use original URL-based approach
+                    const url = '/log/temp/' + temp + (typeParam ? '?type=' + typeParam : '');
+                    const response = await fetch(url, { method: 'POST' });
+
+                    if (response.ok) {
+                        showSuccess(temp + '°F (' + tempType + ') logged!');
+                        manualInput.value = '';
+                        slider.value = 70;
+                        sliderValue.textContent = '70°F';
+                    } else {
+                        const text = await response.text();
+                        showError('Error: ' + text);
+                    }
                 }
             } catch (error) {
                 showError('Network error: ' + error.message);
@@ -2214,7 +2492,7 @@ const statusViewPageHTML = `<!DOCTYPE html>
             bake.events.forEach((event, idx) => {
                 const time = new Date(event.timestamp);
                 html += '<div class="event-item">';
-                html += '<button class="delete-btn" onclick="deleteEvent(' + idx + ', \'' + event.timestamp + '\', \'' + event.event + '\')">Delete</button>';
+                html += '<button class="delete-btn" onclick="deleteEvent(' + idx + ', \'' + event.timestamp + '\', \'' + event.event + '\', \'' + bake.filename + '\')">Delete</button>';
                 html += '<div class="event-time">' + time.toLocaleString() + '</div>';
                 html += '<div class="event-name">' + event.event + '</div>';
 
@@ -2258,7 +2536,7 @@ const statusViewPageHTML = `<!DOCTYPE html>
             modal.classList.remove('active');
         }
 
-        async function deleteEvent(index, timestamp, eventType) {
+        async function deleteEvent(index, timestamp, eventType, bakeFilename) {
             const confirmMsg = 'Delete event "' + eventType + '" at ' + new Date(timestamp).toLocaleString() + '?';
             if (!confirm(confirmMsg)) {
                 return;
@@ -2268,7 +2546,7 @@ const statusViewPageHTML = `<!DOCTYPE html>
                 const response = await fetch('/api/event/delete', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ index: index, timestamp: timestamp })
+                    body: JSON.stringify({ index: index, timestamp: timestamp, bake_date: bakeFilename })
                 });
 
                 if (!response.ok) {
