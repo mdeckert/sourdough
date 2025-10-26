@@ -41,6 +41,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/bake/start", s.handleLoafStart) // Legacy support
 	mux.HandleFunc("/log/oven-in", s.handleOvenInLog) // Must be before /log/
 	mux.HandleFunc("/log/remove-lid", s.handleRemoveLidLog) // Must be before /log/
+	mux.HandleFunc("/log/oven-out", s.handleOvenOutLog) // Must be before /log/
 	mux.HandleFunc("/log/", s.handleLog)
 	mux.HandleFunc("/status", s.handleStatus)
 	mux.HandleFunc("/view/status", s.handleViewStatus)
@@ -787,6 +788,119 @@ func (s *Server) handleRemoveLidLog(w http.ResponseWriter, r *http.Request) {
 	// Append event to current bake
 	if err := s.storage.AppendEvent(event); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to log event: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "success",
+		"event":  event,
+	})
+}
+
+// handleOvenOutLog handles oven-out event logging
+// Automatically copies the most recent oven temperature to maintain visual continuity on charts
+func (s *Server) handleOvenOutLog(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost && r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Check if there's an active bake
+	hasBake, err := s.storage.HasCurrentBake()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error checking current bake: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if !hasBake {
+		http.Error(w, "No active bake. Start a new loaf first", http.StatusBadRequest)
+		return
+	}
+
+	// Read current bake to find most recent oven temperature
+	bake, err := s.storage.ReadCurrentBake()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error reading current bake: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Find the most recent oven temperature (from oven-in or remove-lid events)
+	var lastOvenTemp *float64
+	for i := len(bake.Events) - 1; i >= 0; i-- {
+		event := bake.Events[i]
+		if event.OvenTempF != nil {
+			lastOvenTemp = event.OvenTempF
+			break
+		}
+		// Backwards compatibility: old oven-in events used temp_f
+		if event.Event == models.EventOvenIn && event.TempF != nil {
+			lastOvenTemp = event.TempF
+			break
+		}
+	}
+
+	if lastOvenTemp == nil {
+		http.Error(w, "No oven temperature found in current bake", http.StatusBadRequest)
+		return
+	}
+
+	// Create event with the copied oven temperature
+	event := models.NewEvent(models.EventOvenOut).WithOvenTemp(*lastOvenTemp)
+
+	// Append event to current bake
+	if err := s.storage.AppendEvent(event); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to log event: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Show nice success message if accessed from browser (GET request)
+	if r.Method == http.MethodGet {
+		w.Header().Set("Content-Type", "text/html")
+		htmlTemplate := `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Logged</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #10b981 0%%, #059669 100%%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 100%%;
+            text-align: center;
+        }
+        h1 { font-size: 48px; margin: 0 0 10px 0; }
+        .event-name { color: #333; font-size: 28px; font-weight: 600; margin-bottom: 10px; }
+        .success-msg { color: #059669; font-size: 20px; margin-bottom: 10px; }
+        .time { color: #666; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✅</h1>
+        <div class="event-name">oven-out</div>
+        <p class="success-msg">Event logged successfully</p>
+        <p class="time">%s</p>
+        %s
+    </div>
+</body>
+</html>`
+		successHTML := fmt.Sprintf(htmlTemplate, event.Timestamp.Format("3:04 PM"), navDropdownHTML)
+		w.Write([]byte(successHTML))
 		return
 	}
 

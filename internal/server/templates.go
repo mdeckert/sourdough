@@ -2331,12 +2331,11 @@ const statusViewPageHTML = `<!DOCTYPE html>
                         });
                     }
 
-                    // Handle oven-out event marker (uses temp_f for kitchen temp at time of removal)
-                    // Show it on oven temp line even though it's technically ambient temp
-                    if (event.event === 'oven-out' && event.temp_f) {
+                    // Handle oven-out event marker (copies the last oven temp for visual continuity)
+                    if (event.event === 'oven-out' && event.oven_temp_f) {
                         bakeOven.push({
                             x: time,
-                            y: event.temp_f,
+                            y: event.oven_temp_f,
                             stage: event.event
                         });
                     }
